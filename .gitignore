@@ -1,0 +1,12 @@
+
+# logfiles and snakemake meta data
+*.snakemake
+*.log
+
+# resources
+/resources/
+/logs/
+/results/
+
+# PyCharm
+.idea

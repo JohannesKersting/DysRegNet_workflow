@@ -1,0 +1,10 @@
+
+cores: 32
+
+rerun-triggers: [mtime, params, input, software-env]
+keep-going: True
+use-conda: True
+
+resources:
+  - io=2
+

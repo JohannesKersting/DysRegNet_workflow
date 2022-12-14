@@ -1,0 +1,9 @@
+channels:
+- conda-forge
+- bioconda
+- nodefaults
+dependencies:
+- r-base =4.2.2
+- r-data.table =1.14.6
+- r-argparse =2.1.6
+- bioconductor-lionessr =1.12.0

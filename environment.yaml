@@ -1,0 +1,8 @@
+name: drn_workflow
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python =3.11
+  - snakemake =7.18
+  - graphviz =6.0

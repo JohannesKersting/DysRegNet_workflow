@@ -1,0 +1,214 @@
+from snakemake.utils import validate
+from snakemake.utils import min_version
+import pandas as pd
+import os
+
+min_version("7.18")
+
+DATA_DIR = "/nfs/data/patients_networks/data"
+RESULT_DIR = "/nfs/data/patients_networks/DysRegNet_workflow/results"
+
+
+META_FILE = "expression_raw/TCGA_phenotype_denseDataOnlyDownload.tsv"
+CLINICAL_FILE = "expression_raw/Survival_SupplementalTable_S1_20171025_xena_sp"
+MAPPING_FILE = "expression_raw/probeMap%2Fgencode.v23.annotation.gene.probemap"
+
+RAW_EXPR_COUNTS_FILE = "expression_raw/tcga_gene_expected_count"
+RAW_EXPR_TPM_FILE = "expression_raw/tcga_RSEM_gene_tpm"
+
+KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
+
+CANCER_TYPES = ["COAD", "LUSC", "STAD", "LUAD", "THCA", "HNSC", "LIHC", "PRAD", "KIRC", "BRCA", "KIRP"]
+NORM_METHODS = ["tpm", "mrn"]
+
+# map different normalization methods to their sample sheets
+META_MAP = {"tpm":"tpm", "mrn":"expected_counts"}
+
+
+wildcard_constraints:
+    cancer_type="|".join(CANCER_TYPES+["shared"]),
+    norm_method="|".join(NORM_METHODS)
+
+# helper functions
+
+def get_ref_net_path(wildcards):
+    ref_net = wildcards.ref_net
+    if ref_net.startswith("genie3"):
+        splitted = ref_net.split("_")
+        return f"{RESULT_DIR}/reference_networks/genie3/{splitted[1]}/{ref_net}.csv"
+    else:
+        return f"{RESULT_DIR}/reference_networks/{ref_net}.csv"
+
+
+def get_genie3_patient_network_outputs(method, norm_method):
+    outputs = []
+    for cancer_type in CANCER_TYPES:
+        pattern = f"{RESULT_DIR}/patient_networks/{cancer_type}/{method}/{norm_method}-genie3_{{network_type}}_{norm_method}.top_100k.fea"
+        individual = pattern.format(network_type=cancer_type)
+        shared = pattern.format(network_type="shared")
+        outputs.append(individual)
+        outputs.append(shared)
+    return outputs
+
+
+#### expression data pre-processing ####
+
+
+rule process_pancan_expected_counts:
+    input:
+        meta = f"{DATA_DIR}/{META_FILE}",
+        clinical = f"{DATA_DIR}/{CLINICAL_FILE}",
+        expr = f"{DATA_DIR}/{RAW_EXPR_COUNTS_FILE}",
+        mapping = f"{DATA_DIR}/{MAPPING_FILE}",
+    params:
+        out_dir = f"{RESULT_DIR}/expression_processed",
+    output:
+        expand("{result_dir}/expression_processed/{cancer_type}/expected_counts.csv",
+            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES),
+        expand("{result_dir}/expression_processed/{cancer_type}/expected_counts_meta.csv",
+            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES)
+    log:
+        "logs/process_pancan_expected_counts.log"
+    conda:
+        "envs/process_expr.yaml"
+    shell:
+        "python workflow/scripts/process_pancan_expected_counts.py "
+        "--meta {input.meta} "
+        "--clinical {input.clinical} "
+        "--expr {input.expr} "
+        "--mapping {input.mapping} "
+        "--out_dir {params.out_dir} "
+        " >& {log}"
+
+
+rule process_pancan_tpm:
+    input:
+        meta = f"{DATA_DIR}/{META_FILE}",
+        clinical = f"{DATA_DIR}/{CLINICAL_FILE}",
+        expr = f"{DATA_DIR}/{RAW_EXPR_TPM_FILE}",
+        mapping = f"{DATA_DIR}/{MAPPING_FILE}",
+    params:
+        out_dir = f"{RESULT_DIR}/expression_processed",
+    output:
+        expand("{result_dir}/expression_processed/{cancer_type}/tpm.csv",
+            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES),
+        expand("{result_dir}/expression_processed/{cancer_type}/tpm_meta.csv",
+            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES)
+    log:
+        "logs/process_pancan_tpm.log"
+    conda:
+        "envs/process_expr.yaml"
+    shell:
+        "python workflow/scripts/process_pancan_tpm.py "
+        "--meta {input.meta} "
+        "--clinical {input.clinical} "
+        "--expr {input.expr} "
+        "--mapping {input.mapping} "
+        "--out_dir {params.out_dir} "
+        ">& {log} "
+
+
+rule mrn_normalization:
+    input:
+        f"{RESULT_DIR}/expression_processed/{{cancer_type}}/expected_counts.csv",
+    output:
+        f"{RESULT_DIR}/expression_processed/{{cancer_type}}/mrn.csv"
+    log:
+        "logs/mrn_normalization/mrn_normalization_{cancer_type}.log"
+    conda:
+        "envs/r_deseq2.yaml"
+    threads: 8
+    shell:
+        "Rscript workflow/scripts/mrn_normalization.R {input} {output} >& {log}"
+
+
+#### reference network creation ####
+
+
+rule genie3:
+    input:
+        expr = f"{RESULT_DIR}/expression_processed/{{cancer_type}}/{{norm_method}}.csv",
+        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
+        known_tfs = f"{DATA_DIR}/{KNOWN_TFS_FILE}",
+    output:
+        f"{RESULT_DIR}/reference_networks/genie3/{{cancer_type}}/genie3_{{cancer_type}}_{{norm_method}}.csv"
+
+    log:
+        "logs/genie3/genie3_{cancer_type}_{norm_method}.log"
+    conda:
+        "envs/r_genie3.yaml"
+    threads: 30
+    shell:
+        "Rscript workflow/scripts/genie_run.R "
+        "--expr {input.expr} "
+        "--meta {input.meta} "
+        "--known_tfs {input.known_tfs} "
+        "--threads {threads} "
+        "--output {output} "
+        ">& {log} "
+
+
+rule genie3_shared:
+    input:
+        expand("{result_dir}/reference_networks/genie3/{cancer_type}/genie3_{cancer_type}_{{norm_method}}.csv",
+            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES),
+    output:
+        f"{RESULT_DIR}/reference_networks/genie3/shared/genie3_shared_{{norm_method}}.csv"
+    log:
+        "logs/genie3_shared/genie3_shared_{norm_method}.log"
+    conda:
+        "envs/process_expr.yaml"
+    resources:
+        io=1
+    shell:
+        "python workflow/scripts/genie3_shared.py --input {input} --output {output} &> {log}"
+
+
+rule genie3_top:
+    input:
+        f"{RESULT_DIR}/reference_networks/genie3/{{cancer_type}}/genie3_{{cancer_type}}_{{norm_method}}.csv"
+    output:
+        f"{RESULT_DIR}/reference_networks/genie3/{{cancer_type}}/genie3_{{cancer_type}}_{{norm_method}}.top_{{top_k}}k.csv"
+    log:
+        "logs/genie3_top/genie3_{cancer_type}_{norm_method}.top_{top_k}k.log"
+    conda:
+        "envs/process_expr.yaml"
+    resources:
+        io=1
+    shell:
+        "python workflow/scripts/genie3_top.py --input {input} --top_k {wildcards.top_k} --output {output} &> {log}"
+
+
+#### patient-specific network creation ####
+
+rule dysregnet:
+    input:
+        expr = f"{RESULT_DIR}/expression_processed/{{cancer_type}}/{{norm_method}}.csv",
+        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
+        grn =  get_ref_net_path
+    output:
+        touch(f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}.fea")
+    log:
+        "logs/dysregnet/{cancer_type}/{norm_method}-{ref_net}.log"
+    conda:
+        "envs/dysregnet.yaml"
+    shell:
+        "python workflow/scripts/dysregnet_run.py "
+        "--expr {input.expr} "
+        "--meta {input.meta} "
+        "--grn {input.grn} "
+        "&> {log}"
+
+
+
+rule all:
+    input:
+        #expand(rules.genie3_shared.output, norm_method = NORM_METHODS),
+        expand(rules.genie3_top.output, cancer_type = CANCER_TYPES+["shared"], norm_method = NORM_METHODS, top_k = 100),
+        get_genie3_patient_network_outputs(method="dysregnet",norm_method="tpm")
+
+    default_target: True
+
+
+
+

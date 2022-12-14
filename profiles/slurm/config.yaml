@@ -1,0 +1,30 @@
+
+cluster:
+  mkdir -p .snakemake/slurm_logs/{rule} &&
+  sbatch
+    --partition={resources.partition}
+    --cpus-per-task={threads}
+    --mem={resources.mem_mb}
+    --job-name=smk-drn-{rule}
+    --output=.snakemake/slurm_logs/{rule}/{rule}-%j.out
+    --time=1-0:0:0
+    --parsable
+
+retries: 1
+cluster-cancel: scancel
+keep-going: True
+local-cores: 20
+latency-wait: 60
+jobs: 15
+
+use-conda: True
+rerun-triggers: [mtime, params, input, software-env]
+rerun-incomplete: True
+
+default-resources:
+  - partition=sesame_street
+  - mem_mb=16000
+
+resources:
+  - io=2
+
