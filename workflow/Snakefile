@@ -187,7 +187,7 @@ rule dysregnet:
         meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
         grn =  get_ref_net_path
     output:
-        touch(f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}.fea")
+        f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/dysregnet/{cancer_type}/{norm_method}-{ref_net}.log"
     conda:
@@ -197,6 +197,7 @@ rule dysregnet:
         "--expr {input.expr} "
         "--meta {input.meta} "
         "--grn {input.grn} "
+        "--output {output} "
         "&> {log}"
 
 
