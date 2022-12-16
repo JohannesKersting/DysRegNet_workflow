@@ -40,9 +40,9 @@ def get_ref_net_path(wildcards):
         return f"{RESULT_DIR}/reference_networks/{ref_net}.csv"
 
 
-def get_genie3_patient_network_outputs(method, norm_method):
+def get_genie3_patient_network_outputs(method, norm_method, cancer_types = CANCER_TYPES):
     outputs = []
-    for cancer_type in CANCER_TYPES:
+    for cancer_type in cancer_types:
         pattern = f"{RESULT_DIR}/patient_networks/{cancer_type}/{method}/{norm_method}-genie3_{{network_type}}_{norm_method}.top_100k.fea"
         individual = pattern.format(network_type=cancer_type)
         shared = pattern.format(network_type="shared")
