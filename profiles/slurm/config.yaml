@@ -23,7 +23,7 @@ rerun-incomplete: True
 
 default-resources:
   - partition=sesame_street
-  - mem_mb=16000
+  - mem_mb=20000
 
 resources:
   - io=2

@@ -20,10 +20,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--expr', type=str, required=True,
                     help='Path to the expression CSV matrix (genes as rows, samples as columns)')
 parser.add_argument('--meta', type=str, required=True,
-                    help='Path to the CSV meta file. Sample ids must be in "sample" column'
+                    help='Path to the CSV meta file.'
                     )
 parser.add_argument('--grn', type=str, required=True,
-                    help='Path to a reference network in CSV format. Must have exactly two columns and a header.'
+                    help='Path to a reference network in CSV format. The first two columns will be selected and TF and TG cols.'
                     )
 parser.add_argument('--output', type=str, required=True,
                     help='The output file path and name.'
@@ -41,6 +41,7 @@ print("\n")
 conCov = ["birth_days_to"]
 catCov = ["gender", "race"]
 conCol = "condition"
+idCol = "sample"
 
 
 # Read data
@@ -50,16 +51,16 @@ grn = pd.read_csv(args.grn)
 
 # Pre-process data
 
-meta = meta[ ["sample",conCol] + conCov + catCov ]
+meta = meta[ [idCol, conCol] + conCov + catCov ]
 meta["birth_days_to"] = meta["birth_days_to"].fillna(meta["birth_days_to"].mean())
 meta['race'] = meta['race'].fillna('not reported')
 meta["race"] = meta["race"].replace({"[Unknown]": 'not reported', "[Not Evaluated]":'not reported'})
 
 expr = expr.set_index(expr.columns[0])
-if not all(expr.columns == meta.iloc[:,0]):
-    raise ValueError("Column names of expression differ from 'sample' column in meta")
+if not all(expr.columns == meta[idCol]):
+    raise ValueError(f"Column names of expression differ from '{idCol}' column in meta")
 expr = expr.T
-expr.insert(0, 'sample_ids', expr.index)
+expr.insert(0, idCol, expr.index) # dysregnet wants ids in first column
 
 grn = grn.iloc[:, 0:2]
 
@@ -102,7 +103,9 @@ print(result)
 
 # This works only with applied condition criterion for dysregnet
 col_sums = result[result.columns[1:]].apply(np.sum, axis=0)
+not_zero = np.sum(np.sum(result[result.columns[1:]]!=0))
 
+print(f"Number of total dysregulations: {not_zero}")
 print(f"Number of edges with at least one dysregulation: {np.sum(col_sums!=0)}")
 print(f"Number of positive slopes: {np.sum(col_sums>0)}")
 print(f"Number of negative slopes: {np.sum(col_sums<0)}")
