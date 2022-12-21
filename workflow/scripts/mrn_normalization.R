@@ -32,6 +32,12 @@ means <- apply(normalized_counts[,meta$condition==0],1,mean)
 sds <- apply(normalized_counts[,meta$condition==0],1,sd)
 normalized_counts <- apply(normalized_counts,2,function(col){ (col-means)/sds })
 
+# drop rows with 0 sd (produced nans and infs)
+if(any(sds==0)){
+  print(paste("Dropping ", sum(sds==0), "genes with sd 0 in the control samples..."))
+  normalized_counts <- normalized_counts[-which(sds==0),]
+}
+
 # turn into data.table
 normalized_counts <- as.data.table(normalized_counts, keep.rownames="sample")
 

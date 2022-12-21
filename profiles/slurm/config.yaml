@@ -7,15 +7,15 @@ cluster:
     --mem={resources.mem_mb}
     --job-name=smk-drn-{rule}
     --output=.snakemake/slurm_logs/{rule}/{rule}-%j.out
-    --time=1-0:0:0
+    --time=2-0:0:0
     --parsable
+#    --nodelist={resources.nodelist}
 
-retries: 1
 cluster-cancel: scancel
 keep-going: True
 local-cores: 20
 latency-wait: 60
-jobs: 15
+jobs: 20
 
 use-conda: True
 rerun-triggers: [mtime, params, input, software-env]
@@ -23,7 +23,11 @@ rerun-incomplete: True
 
 default-resources:
   - partition=sesame_street
+#  - nodelist="elmo.exbio.wzw.tum.de,ernie.exbio.wzw.tum.de,grover.exbio.wzw.tum.de,kermit.exbio.wzw.tum.de"
   - mem_mb=20000
+
+set-resources:
+  - ssn:mem_mb=50000
 
 resources:
   - io=2
