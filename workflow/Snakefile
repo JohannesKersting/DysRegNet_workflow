@@ -36,6 +36,13 @@ def get_ref_net_path(wildcards):
     if ref_net.startswith("genie3"):
         splitted = ref_net.split("_")
         return f"{RESULT_DIR}/reference_networks/genie3/{splitted[1]}/{ref_net}.csv"
+
+    elif ref_net.startswith("exp"):
+        return f"{RESULT_DIR}/reference_networks/HTRIdb_data.csv"
+
+    elif ref_net.startswith("string"):
+        return f"{RESULT_DIR}/reference_networks/string.csv"
+
     else:
         return f"{RESULT_DIR}/reference_networks/{ref_net}.csv"
 
@@ -53,6 +60,29 @@ def get_genie3_patient_network_outputs(method, norm_method, cancer_types = CANCE
 
 #### expression data pre-processing ####
 
+rule prepare_HTRIdb:
+    input:
+        f"{DATA_DIR}/reference_networks/HTRIdb_data.csv"
+    output:
+        f"{RESULT_DIR}/reference_networks/HTRIdb_data.csv"
+    log:
+        "logs/prepare_HTRIdb.log"
+    conda:
+        "envs/process_expr.yaml"
+    shell:
+        "python workflow/scripts/prepare_HTRIdb.py --input {input} --output {output} >& {log}"
+
+rule prepare_string:
+    input:
+        f"{DATA_DIR}/reference_networks/string.csv"
+    output:
+        f"{RESULT_DIR}/reference_networks/string.csv"
+    log:
+        "logs/prepare_string.log"
+    conda:
+        "envs/process_expr.yaml"
+    shell:
+        "python workflow/scripts/prepare_string.py --input {input} --output {output} >& {log}"
 
 rule process_pancan_expected_counts:
     input:
@@ -231,6 +261,13 @@ rule all:
         get_genie3_patient_network_outputs(method="ssn", norm_method="tpm"),
         get_genie3_patient_network_outputs(method="dysregnet", norm_method="mrn"),
         get_genie3_patient_network_outputs(method="ssn", norm_method="mrn"),
+        expand("{result_dir}/patient_networks/{cancer_type}/dysregnet/{norm_method}-{ref_net}.fea",
+            result_dir=RESULT_DIR, cancer_type = "BRCA" , norm_method = NORM_METHODS, ref_net =["exp","string"]
+        ),
+        expand("{result_dir}/patient_networks/{cancer_type}/ssn/{norm_method}-{ref_net}.fea",
+           result_dir=RESULT_DIR, cancer_type = "BRCA", norm_method = NORM_METHODS, ref_net =["exp", "string"]
+        ),
+
 
     default_target: True
 
