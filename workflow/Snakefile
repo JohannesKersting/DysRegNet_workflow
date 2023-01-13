@@ -262,10 +262,10 @@ rule all:
         get_genie3_patient_network_outputs(method="dysregnet", norm_method="mrn"),
         get_genie3_patient_network_outputs(method="ssn", norm_method="mrn"),
         expand("{result_dir}/patient_networks/{cancer_type}/dysregnet/{norm_method}-{ref_net}.fea",
-            result_dir=RESULT_DIR, cancer_type = "BRCA" , norm_method = NORM_METHODS, ref_net =["exp","string"]
+            result_dir=RESULT_DIR, cancer_type = CANCER_TYPES, norm_method = NORM_METHODS, ref_net =["exp","string"]
         ),
         expand("{result_dir}/patient_networks/{cancer_type}/ssn/{norm_method}-{ref_net}.fea",
-           result_dir=RESULT_DIR, cancer_type = "BRCA", norm_method = NORM_METHODS, ref_net =["exp", "string"]
+           result_dir=RESULT_DIR, cancer_type = CANCER_TYPES, norm_method = NORM_METHODS, ref_net =["exp", "string"]
         ),
 
 
