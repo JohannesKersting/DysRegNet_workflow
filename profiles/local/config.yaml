@@ -1,7 +1,7 @@
 
 cores: 32
 
-rerun-triggers: [mtime, params, input, software-env]
+rerun-triggers: [mtime, params, input]
 keep-going: True
 use-conda: True
 

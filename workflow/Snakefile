@@ -20,6 +20,7 @@ KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
 
 CANCER_TYPES = ["COAD", "LUSC", "STAD", "LUAD", "THCA", "HNSC", "LIHC", "PRAD", "KIRC", "BRCA", "KIRP"]
 NORM_METHODS = ["tpm", "mrn"]
+METHODS = ["dysregnet", "ssn"]
 
 # map different normalization methods to their sample sheets
 META_MAP = {"tpm":"tpm", "mrn":"expected_counts"}
@@ -27,7 +28,8 @@ META_MAP = {"tpm":"tpm", "mrn":"expected_counts"}
 
 wildcard_constraints:
     cancer_type="|".join(CANCER_TYPES+["shared"]),
-    norm_method="|".join(NORM_METHODS)
+    norm_method="|".join(NORM_METHODS),
+    method = "|".join(METHODS),
 
 # helper functions
 
@@ -58,7 +60,8 @@ def get_genie3_patient_network_outputs(method, norm_method, cancer_types = CANCE
     return outputs
 
 
-#### expression data pre-processing ####
+
+#### reference network preparation ####
 
 rule prepare_HTRIdb:
     input:
@@ -83,6 +86,11 @@ rule prepare_string:
         "envs/process_expr.yaml"
     shell:
         "python workflow/scripts/prepare_string.py --input {input} --output {output} >& {log}"
+
+
+
+
+#### expression data pre-processing ####
 
 rule process_pancan_expected_counts:
     input:
@@ -153,8 +161,8 @@ rule mrn_normalization:
         "Rscript workflow/scripts/mrn_normalization.R {input.expr} {input.meta} {output} >& {log}"
 
 
-#### reference network creation ####
 
+#### reference network creation ####
 
 rule genie3:
     input:
@@ -210,6 +218,7 @@ rule genie3_top:
         "python workflow/scripts/genie3_top.py --input {input} --top_k {wildcards.top_k} --output {output} &> {log}"
 
 
+
 #### patient-specific network creation ####
 
 rule dysregnet:
@@ -253,6 +262,44 @@ rule ssn:
 
 
 
+#### benchmark ####
+
+rule compute_overlap:
+    input:
+        expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
+            result_dir=RESULT_DIR,cancer_type=CANCER_TYPES),
+    output:
+        f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap-{{norm_method}}-{{ref_net}}.fea"
+    log:
+        "logs/compute_overlap/{method}/overlap-{norm_method}-{ref_net}.log"
+    conda:
+        "envs/dysregnet.yaml"
+    shell:
+        "python workflow/scripts/compute_overlap.py "
+        "--input {input} "
+        "--output {output} "
+        "&> {log}"
+
+rule clustering:
+    input:
+        overlaps = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap-{{norm_method}}-{{ref_net}}.fea",
+        meta = f"{DATA_DIR}/{META_FILE}",
+    output:
+        f"{RESULT_DIR}/figures/clustering/{{method}}-{{norm_method}}-{{ref_net}}.png"
+    log:
+        "logs/clustering/{method}-{norm_method}-{ref_net}.log"
+    conda:
+        "envs/dysregnet.yaml"
+    shell:
+        "python workflow/scripts/clustering.py "
+        "--overlaps {input.overlaps} "
+        "--meta {input.meta} "
+        "--output {output} "
+        "&> {log}"
+
+
+
+
 rule all:
     input:
         #expand(rules.genie3_shared.output, norm_method = NORM_METHODS),
@@ -261,13 +308,18 @@ rule all:
         get_genie3_patient_network_outputs(method="ssn", norm_method="tpm"),
         get_genie3_patient_network_outputs(method="dysregnet", norm_method="mrn"),
         get_genie3_patient_network_outputs(method="ssn", norm_method="mrn"),
-        expand("{result_dir}/patient_networks/{cancer_type}/dysregnet/{norm_method}-{ref_net}.fea",
-            result_dir=RESULT_DIR, cancer_type = CANCER_TYPES, norm_method = NORM_METHODS, ref_net =["exp","string"]
-        ),
-        expand("{result_dir}/patient_networks/{cancer_type}/ssn/{norm_method}-{ref_net}.fea",
-           result_dir=RESULT_DIR, cancer_type = CANCER_TYPES, norm_method = NORM_METHODS, ref_net =["exp", "string"]
+        expand("{result_dir}/patient_networks/{cancer_type}/{method}/{norm_method}-{ref_net}.fea",
+            result_dir=RESULT_DIR,
+            cancer_type = CANCER_TYPES,
+            method = METHODS,
+            norm_method = NORM_METHODS,
+            ref_net =["exp","string"]
         ),
 
+        expand("{result_dir}/benchmark/compute_overlap/{method}/overlap-{norm_method}-{ref_net}.fea",
+           result_dir=RESULT_DIR, method = ["dysregnet"], norm_method = NORM_METHODS, ref_net =["exp"]
+        ),
+        f"{RESULT_DIR}/figures/clustering/dysregnet-tpm-exp.png"
 
     default_target: True
 

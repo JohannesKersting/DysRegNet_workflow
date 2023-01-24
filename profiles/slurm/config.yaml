@@ -18,7 +18,7 @@ latency-wait: 60
 jobs: 20
 
 use-conda: True
-rerun-triggers: [mtime, params, input, software-env]
+rerun-triggers: [mtime, params, input]
 rerun-incomplete: True
 
 default-resources:
