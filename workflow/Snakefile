@@ -269,7 +269,8 @@ rule compute_overlap:
         expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
             result_dir=RESULT_DIR,cancer_type=CANCER_TYPES),
     output:
-        f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap-{{norm_method}}-{{ref_net}}.fea"
+        edges = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
+        nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/compute_overlap/{method}/overlap-{norm_method}-{ref_net}.log"
     conda:
@@ -277,24 +278,29 @@ rule compute_overlap:
     shell:
         "python workflow/scripts/compute_overlap.py "
         "--input {input} "
-        "--output {output} "
+        "--output_edges {output.edges} "
+        "--output_nodes {output.nodes} "
         "&> {log}"
 
 rule clustering:
     input:
-        overlaps = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap-{{norm_method}}-{{ref_net}}.fea",
+        overlaps_edges = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
+        overlaps_nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea",
         meta = f"{DATA_DIR}/{META_FILE}",
     output:
-        f"{RESULT_DIR}/figures/clustering/{{method}}-{{norm_method}}-{{ref_net}}.png"
+        edges = f"{RESULT_DIR}/figures/clustering/{{method}}-edges-{{norm_method}}-{{ref_net}}.png",
+        nodes = f"{RESULT_DIR}/figures/clustering/{{method}}-nodes-{{norm_method}}-{{ref_net}}.png",
     log:
         "logs/clustering/{method}-{norm_method}-{ref_net}.log"
     conda:
         "envs/dysregnet.yaml"
     shell:
         "python workflow/scripts/clustering.py "
-        "--overlaps {input.overlaps} "
+        "--overlaps_edges {input.overlaps_edges} "
+        "--overlaps_nodes {input.overlaps_nodes} "
         "--meta {input.meta} "
-        "--output {output} "
+        "--output_edges {output.edges} "
+        "--output_nodes {output.nodes} "
         "&> {log}"
 
 
@@ -316,10 +322,15 @@ rule all:
             ref_net =["exp","string"]
         ),
 
-        expand("{result_dir}/benchmark/compute_overlap/{method}/overlap-{norm_method}-{ref_net}.fea",
+        expand("{result_dir}/benchmark/compute_overlap/{method}/overlap_edges-{norm_method}-{ref_net}.fea",
            result_dir=RESULT_DIR, method = ["dysregnet"], norm_method = NORM_METHODS, ref_net =["exp"]
         ),
-        f"{RESULT_DIR}/figures/clustering/dysregnet-tpm-exp.png"
+        expand("{result_dir}/figures/clustering/{method}-edges-{norm_method}-{ref_net}.png",
+           result_dir=RESULT_DIR, method =["dysregnet","ssn"], norm_method = NORM_METHODS, ref_net =["exp","string"]
+        ),
+        expand("{result_dir}/figures/clustering/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
+           result_dir=RESULT_DIR, method =["dysregnet", "ssn"], norm_method = NORM_METHODS
+           ),
 
     default_target: True
 
