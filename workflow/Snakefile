@@ -75,6 +75,7 @@ rule prepare_HTRIdb:
     shell:
         "python workflow/scripts/prepare_HTRIdb.py --input {input} --output {output} >& {log}"
 
+
 rule prepare_string:
     input:
         f"{DATA_DIR}/reference_networks/string.csv"
@@ -288,10 +289,10 @@ rule clustering:
         overlaps_nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea",
         meta = f"{DATA_DIR}/{META_FILE}",
     output:
-        edges = f"{RESULT_DIR}/figures/clustering/{{method}}-edges-{{norm_method}}-{{ref_net}}.png",
-        nodes = f"{RESULT_DIR}/figures/clustering/{{method}}-nodes-{{norm_method}}-{{ref_net}}.png",
+        edges = f"{RESULT_DIR}/figures/clustering/{{method}}/{{method}}-edges-{{norm_method}}-{{ref_net}}.png",
+        nodes = f"{RESULT_DIR}/figures/clustering/{{method}}/{{method}}-nodes-{{norm_method}}-{{ref_net}}.png",
     log:
-        "logs/clustering/{method}-{norm_method}-{ref_net}.log"
+        "logs/clustering/{method}/{norm_method}-{ref_net}.log"
     conda:
         "envs/dysregnet.yaml"
     shell:
@@ -321,16 +322,13 @@ rule all:
             norm_method = NORM_METHODS,
             ref_net =["exp","string"]
         ),
-
-        expand("{result_dir}/benchmark/compute_overlap/{method}/overlap_edges-{norm_method}-{ref_net}.fea",
-           result_dir=RESULT_DIR, method = ["dysregnet"], norm_method = NORM_METHODS, ref_net =["exp"]
-        ),
-        expand("{result_dir}/figures/clustering/{method}-edges-{norm_method}-{ref_net}.png",
+        expand("{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-{ref_net}.png",
            result_dir=RESULT_DIR, method =["dysregnet","ssn"], norm_method = NORM_METHODS, ref_net =["exp","string"]
         ),
-        expand("{result_dir}/figures/clustering/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
+        expand("{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
            result_dir=RESULT_DIR, method =["dysregnet", "ssn"], norm_method = NORM_METHODS
-           ),
+        ),
+
 
     default_target: True
 
