@@ -70,8 +70,6 @@ rule prepare_HTRIdb:
         f"{RESULT_DIR}/reference_networks/HTRIdb_data.csv"
     log:
         "logs/prepare_HTRIdb.log"
-    conda:
-        "envs/process_expr.yaml"
     shell:
         "python workflow/scripts/prepare_HTRIdb.py --input {input} --output {output} >& {log}"
 
@@ -83,8 +81,6 @@ rule prepare_string:
         f"{RESULT_DIR}/reference_networks/string.csv"
     log:
         "logs/prepare_string.log"
-    conda:
-        "envs/process_expr.yaml"
     shell:
         "python workflow/scripts/prepare_string.py --input {input} --output {output} >& {log}"
 
@@ -108,8 +104,6 @@ rule process_pancan_expected_counts:
             result_dir=RESULT_DIR, cancer_type=CANCER_TYPES)
     log:
         "logs/process_pancan_expected_counts.log"
-    conda:
-        "envs/process_expr.yaml"
     shell:
         "python workflow/scripts/process_pancan_expected_counts.py "
         "--meta {input.meta} "
@@ -135,8 +129,6 @@ rule process_pancan_tpm:
             result_dir=RESULT_DIR, cancer_type=CANCER_TYPES)
     log:
         "logs/process_pancan_tpm.log"
-    conda:
-        "envs/process_expr.yaml"
     shell:
         "python workflow/scripts/process_pancan_tpm.py "
         "--meta {input.meta} "
@@ -155,8 +147,6 @@ rule mrn_normalization:
         f"{RESULT_DIR}/expression_processed/{{cancer_type}}/mrn.csv"
     log:
         "logs/mrn_normalization/mrn_normalization_{cancer_type}.log"
-    conda:
-        "envs/r_deseq2.yaml"
     threads: 8
     shell:
         "Rscript workflow/scripts/mrn_normalization.R {input.expr} {input.meta} {output} >& {log}"
@@ -175,8 +165,6 @@ rule genie3:
 
     log:
         "logs/genie3/genie3_{cancer_type}_{norm_method}.log"
-    conda:
-        "envs/r_genie3.yaml"
     threads: 30
     shell:
         "Rscript workflow/scripts/genie_run.R "
@@ -196,8 +184,6 @@ rule genie3_shared:
         f"{RESULT_DIR}/reference_networks/genie3/shared/genie3_shared_{{norm_method}}.csv"
     log:
         "logs/genie3_shared/genie3_shared_{norm_method}.log"
-    conda:
-        "envs/process_expr.yaml"
     resources:
         io=1
     shell:
@@ -211,8 +197,6 @@ rule genie3_top:
         f"{RESULT_DIR}/reference_networks/genie3/{{cancer_type}}/genie3_{{cancer_type}}_{{norm_method}}.top_{{top_k}}k.csv"
     log:
         "logs/genie3_top/genie3_{cancer_type}_{norm_method}.top_{top_k}k.log"
-    conda:
-        "envs/process_expr.yaml"
     resources:
         io=1
     shell:
@@ -231,8 +215,6 @@ rule dysregnet:
         f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/dysregnet/{cancer_type}/{norm_method}-{ref_net}.log"
-    conda:
-        "envs/dysregnet.yaml"
     shell:
         "python workflow/scripts/dysregnet_run.py "
         "--expr {input.expr} "
@@ -251,8 +233,6 @@ rule ssn:
         f"{RESULT_DIR}/patient_networks/{{cancer_type}}/ssn/{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/ssn/{cancer_type}/{norm_method}-{ref_net}.log"
-    conda:
-        "envs/dysregnet.yaml"
     shell:
         "python workflow/scripts/ssn_run.py "
         "--expr {input.expr} "
@@ -274,8 +254,6 @@ rule compute_overlap:
         nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/compute_overlap/{method}/overlap-{norm_method}-{ref_net}.log"
-    conda:
-        "envs/dysregnet.yaml"
     shell:
         "python workflow/scripts/compute_overlap.py "
         "--input {input} "
@@ -293,8 +271,6 @@ rule clustering:
         nodes = f"{RESULT_DIR}/figures/clustering/{{method}}/{{method}}-nodes-{{norm_method}}-{{ref_net}}.png",
     log:
         "logs/clustering/{method}/{norm_method}-{ref_net}.log"
-    conda:
-        "envs/dysregnet.yaml"
     shell:
         "python workflow/scripts/clustering.py "
         "--overlaps_edges {input.overlaps_edges} "
