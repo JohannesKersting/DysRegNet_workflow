@@ -1,3 +1,4 @@
+name: drn_workflow
 channels:
 - conda-forge
 - bioconda
