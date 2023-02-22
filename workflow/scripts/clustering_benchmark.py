@@ -134,7 +134,7 @@ def main():
 
     # plotting
     plt.figure(figsize=(4, 3))
-    sns.set(font_scale=0.8, style="white")
+    sns.set(font_scale=0.8, style="whitegrid")
 
     g = sns.barplot(x="method", hue="network", y="F1", data=input_df, palette="Set2")
     g.set(xticklabels=["DysRegNet", "SSN"], ylim=(0, 1))

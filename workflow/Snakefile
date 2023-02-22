@@ -61,8 +61,8 @@ def get_genie3_patient_network_outputs(method, norm_method, cancer_types = CANCE
     return outputs
 
 def get_shared_ref_net_names(norm_method):
-    shared_network_names =  ["string",
-                             "exp",
+    shared_network_names =  ["exp",
+                             "string",
                              f"genie3_shared_{norm_method}.top_100k"
                              ]
     return shared_network_names
