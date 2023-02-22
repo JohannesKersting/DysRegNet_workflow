@@ -47,11 +47,11 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--overlaps_edges',  type=str, required=True,
-                        help='Paths to edge overlaps')
+                        help='Path to edge overlaps in feather format.')
     parser.add_argument('--overlaps_nodes',  type=str, required=True,
-                        help='Paths to node overlaps')
+                        help='Path to node overlaps in feather format.')
     parser.add_argument('--meta',  type=str, required=True,
-                        help='Paths to multiple patient specific networks')
+                        help='Path to meta sheet.')
     parser.add_argument('--output_edges', type=str, required=True,
                         help='Path to the edge cluster heatmap')
     parser.add_argument('--output_nodes', type=str, required=True,
