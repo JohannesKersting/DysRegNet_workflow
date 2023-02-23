@@ -125,11 +125,12 @@ def main():
     input_df = pd.DataFrame(input_infos, columns=["path", "method", "overlap_type", "norm_method", "network"])
     input_df["method"] = input_df["method"].map(method_lut)
     input_df["network"] = input_df["network"].map(network_lut)
+    print(f"input_df: \n{input_df.to_string()}\n")
 
 
     # cluster benchmarking
     input_df["F1"] = [clustering_benchmark(path, meta) for path in input_df["path"].values]
-    print(f"input_df with F1: \n{input_df}\n")
+    print(f"input_df with F1: \n{input_df.to_string()}\n")
 
 
     # plotting
