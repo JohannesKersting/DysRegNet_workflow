@@ -308,6 +308,28 @@ rule clustering_benchmark:
         "&> {log}"
 
 
+#### omics analysis ####
+
+rule methylation_tests:
+    input:
+        methylation = f"{DATA_DIR}/omics_analysis/methylation.csv",
+        networks = expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
+            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES),
+    output:
+        local_out = f"{RESULT_DIR}/omics_analysis/methylation_tests/{{method}}/meth_tests_local-{{norm_method}}-{{ref_net}}.npy",
+        global_out = f"{RESULT_DIR}/omics_analysis/methylation_tests/{{method}}/meth_tests_global-{{norm_method}}-{{ref_net}}.npy"
+    log:
+        "logs/methylation_tests/{method}/{norm_method}-{ref_net}.log"
+    shell:
+        "python workflow/scripts/methylation_tests.py "
+        "--methylation {input.methylation} "
+        "--networks {input.networks} "
+        "--output_local {output.local_out} "
+        "--output_global {output.global_out} "
+        "&> {log}"
+
+
+
 
 
 
@@ -334,6 +356,9 @@ rule all:
         ),
         expand(rules.clustering_benchmark.output, norm_method=NORM_METHODS),
 
+        expand("{RESULT_DIR}/omics_analysis/methylation_tests/{method}/meth_tests_global-{norm_method}-{ref_net}.npy",
+            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
+        ),
 
     default_target: True
 
