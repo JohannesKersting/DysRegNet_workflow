@@ -6,7 +6,6 @@ import os
 min_version("7.18")
 
 DATA_DIR = "/nfs/data/patients_networks/data"
-#RESULT_DIR = "/nfs/data/patients_networks/DysRegNet_workflow/results"
 RESULT_DIR = "results"
 
 
@@ -39,7 +38,6 @@ def get_ref_net_path(wildcards):
     if ref_net.startswith("genie3"):
         splitted = ref_net.split("_")
         return f"{RESULT_DIR}/reference_networks/genie3/{splitted[1]}/{ref_net}.csv"
-
     elif ref_net.startswith("exp"):
         return f"{RESULT_DIR}/reference_networks/HTRIdb_data.csv"
 
@@ -66,6 +64,29 @@ def get_shared_ref_net_names(norm_method):
                              f"genie3_shared_{norm_method}.top_100k"
                              ]
     return shared_network_names
+
+def get_ref_net_types(norm_method):
+    return get_shared_ref_net_names(norm_method) + [f"genie3_individual_{norm_method}.top_100k"]
+
+def get_ref_net_names(ref_net_type, norm_method, cancer_types = CANCER_TYPES):
+    """
+    Purpose of this method is, to get the differen ref nets used for genie3_individual for each cancer
+    :param ref_net_type: string has to start with 'exp', 'string', 'genie3_shared', or 'genie3_individual'
+    :param norm_method: the norm method
+    :param cancer_types: list of cancer types
+    :return: a list with the ref net used for each cancer type in cancer_types
+    """
+
+    if ref_net_type.startswith("exp"):
+        return ["exp"] * len(cancer_types)
+    elif ref_net_type.startswith("string"):
+        return ["string"] * len(cancer_types)
+    elif ref_net_type.startswith("genie3_shared"):
+        return [f"genie3_shared_{norm_method}.top_100k"] * len(cancer_types)
+    elif ref_net_type.startswith("genie3_individual"):
+        return [f"genie3_{cancer_type}_{norm_method}.top_100k" for cancer_type in cancer_types]
+    else:
+        raise Exception(f"Unknown ref_net_type: {ref_net_type}")
 
 
 
@@ -270,6 +291,7 @@ rule compute_overlap:
         "--output_nodes {output.nodes} "
         "&> {log}"
 
+
 rule clustering:
     input:
         overlaps_edges = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
@@ -288,6 +310,7 @@ rule clustering:
         "--output_edges {output.edges} "
         "--output_nodes {output.nodes} "
         "&> {log}"
+
 
 rule clustering_benchmark:
     input:
@@ -313,13 +336,14 @@ rule clustering_benchmark:
 rule methylation_tests:
     input:
         methylation = f"{DATA_DIR}/omics_analysis/methylation.csv",
-        networks = expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
-            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES),
+        networks = lambda wildcards: expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{ref_net}.fea",
+            zip,
+            result_dir=[RESULT_DIR]*len(CANCER_TYPES), cancer_type=CANCER_TYPES, ref_net=get_ref_net_names(wildcards.ref_net_type, wildcards.norm_method)),
     output:
-        local_out = f"{RESULT_DIR}/omics_analysis/methylation_tests/{{method}}/meth_tests_local-{{norm_method}}-{{ref_net}}.npy",
-        global_out = f"{RESULT_DIR}/omics_analysis/methylation_tests/{{method}}/meth_tests_global-{{norm_method}}-{{ref_net}}.npy"
+        local_out = f"{RESULT_DIR}/omics_analysis/methylation_tests/{{method}}/meth_tests_local-{{norm_method}}-{{ref_net_type}}.npy",
+        global_out = f"{RESULT_DIR}/omics_analysis/methylation_tests/{{method}}/meth_tests_global-{{norm_method}}-{{ref_net_type}}.npy"
     log:
-        "logs/methylation_tests/{method}/{norm_method}-{ref_net}.log"
+        "logs/methylation_tests/{method}/{norm_method}-{ref_net_type}.log"
     shell:
         "python workflow/scripts/methylation_tests.py "
         "--methylation {input.methylation} "
@@ -328,15 +352,37 @@ rule methylation_tests:
         "--output_global {output.global_out} "
         "&> {log}"
 
-
+rule methylation_plots:
+    input:
+        inputs_local = lambda wildcards: expand(
+            rules.methylation_tests.output.local_out,
+            ref_net_type=get_ref_net_types(wildcards.norm_method),
+            method=wildcards.method,
+            norm_method=wildcards.norm_method,
+        ),
+        inputs_global = lambda wildcards: expand(
+            rules.methylation_tests.output.global_out,
+            ref_net_type=get_ref_net_types(wildcards.norm_method),
+            method=wildcards.method,
+            norm_method=wildcards.norm_method,
+        ),
+    output:
+        f"{RESULT_DIR}/figures/omics_analysis/{{method}}/methylation-{{method}}-{{norm_method}}.png"
+    log:
+        "logs/methylation_plots/{method}-{norm_method}.log"
+    shell:
+        "python workflow/scripts/methylation_plots.py "
+        "--inputs_local {input.inputs_local} "
+        "--inputs_global {input.inputs_global} "
+        "--output {output} "
+        "&> {log}"
 
 
 
 
 rule all:
     input:
-        #expand(rules.genie3_shared.output, norm_method = NORM_METHODS),
-        #expand(rules.genie3_top.output, cancer_type = CANCER_TYPES+["shared"], norm_method = NORM_METHODS, top_k = 100),
+        # patient-specific network outputs
         get_genie3_patient_network_outputs(method="dysregnet",norm_method="tpm"),
         get_genie3_patient_network_outputs(method="ssn", norm_method="tpm"),
         get_genie3_patient_network_outputs(method="dysregnet", norm_method="mrn"),
@@ -348,17 +394,20 @@ rule all:
             norm_method = NORM_METHODS,
             ref_net =["exp","string"]
         ),
+
+        # clustering heatmaps
         expand("{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-{ref_net}.png",
            result_dir=RESULT_DIR, method=["dysregnet","ssn"], norm_method=NORM_METHODS, ref_net=["exp","string"]
         ),
         expand("{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS
         ),
+
+        # clustering benchmark
         expand(rules.clustering_benchmark.output, norm_method=NORM_METHODS),
 
-        expand("{RESULT_DIR}/omics_analysis/methylation_tests/{method}/meth_tests_global-{norm_method}-{ref_net}.npy",
-            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
-        ),
+        # methylation plots
+        expand(rules.methylation_plots.output, method=["dysregnet","ssn"], norm_method=NORM_METHODS)
 
     default_target: True
 
