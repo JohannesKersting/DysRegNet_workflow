@@ -117,6 +117,7 @@ def main():
                      palette="Set2")
 
     ax.legend(title="Reference network", bbox_to_anchor=(0, 1.03), loc="lower left", borderaxespad=0)
+    ax.set(xlim=(0, 35))
     plt.tight_layout()
     plt.ylabel("Cancer")
 
