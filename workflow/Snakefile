@@ -291,6 +291,23 @@ rule compute_overlap:
         "--output_nodes {output.nodes} "
         "&> {log}"
 
+rule compute_overlap_shared:
+    input:
+        expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
+            result_dir=RESULT_DIR,cancer_type=CANCER_TYPES),
+    output:
+        edges = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
+        nodes = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
+    log:
+        "logs/compute_overlap_shared/{method}/overlap-{norm_method}-{ref_net}.log"
+    shell:
+        "python workflow/scripts/compute_overlap.py "
+        "--input {input} "
+        "--shared "
+        "--output_edges {output.edges} "
+        "--output_nodes {output.nodes} "
+        "&> {log}"
+
 
 rule clustering:
     input:
@@ -330,6 +347,23 @@ rule clustering_benchmark:
         "--output {output} "
         "&> {log}"
 
+rule clustering_benchmark_shared:
+    input:
+        input = lambda wildcards:
+            expand("{result_dir}/benchmark/compute_overlap_shared/{method}/overlap_edges-{{norm_method}}-{ref_net}.fea",
+                result_dir=RESULT_DIR, method=METHODS, ref_net=get_shared_ref_net_names(wildcards.norm_method)
+            ),
+        meta = f"{DATA_DIR}/{META_FILE}",
+    output:
+        f"{RESULT_DIR}/figures/clustering_benchmark_shared/f1-{{norm_method}}.png"
+    log:
+        "logs/clustering_benchmark_shared/f1-{norm_method}.log"
+    shell:
+        "python workflow/scripts/clustering_benchmark.py "
+        "--input {input.input} "
+        "--meta {input.meta} "
+        "--output {output} "
+        "&> {log}"
 
 #### omics analysis ####
 
@@ -405,6 +439,9 @@ rule all:
 
         # clustering benchmark
         expand(rules.clustering_benchmark.output, norm_method=NORM_METHODS),
+
+        # clustering benchmark shared
+        expand(rules.clustering_benchmark_shared.output, norm_method=NORM_METHODS),
 
         # methylation plots
         expand(rules.methylation_plots.output, method=["dysregnet","ssn"], norm_method=NORM_METHODS)
