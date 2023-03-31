@@ -28,6 +28,10 @@ default-resources:
 
 set-resources:
   - ssn:mem_mb=50000
+  - clustering_benchmark_shared:mem_mb=50000
+  - clustering_benchmark:mem_mb=50000
+  - compute_overlap_shared:mem_mb=50000
+  - compute_overlap:mem_mb=50000
 
 resources:
   - io=2
