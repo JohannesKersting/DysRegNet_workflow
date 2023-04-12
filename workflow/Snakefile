@@ -70,7 +70,7 @@ def get_ref_net_types(norm_method):
 
 def get_ref_net_names(ref_net_type, norm_method, cancer_types = CANCER_TYPES):
     """
-    Purpose of this method is, to get the differen ref nets used for genie3_individual for each cancer
+    Purpose of this method is, to get the different ref nets used for genie3_individual for each cancer
     :param ref_net_type: string has to start with 'exp', 'string', 'genie3_shared', or 'genie3_individual'
     :param norm_method: the norm method
     :param cancer_types: list of cancer types
@@ -272,6 +272,26 @@ rule ssn:
         "&> {log}"
 
 
+rule lioness:
+    input:
+        expr = f"{RESULT_DIR}/expression_processed/{{cancer_type}}/{{norm_method}}.csv",
+        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
+        grn =  get_ref_net_path
+    output:
+        f"{RESULT_DIR}/patient_networks/{{cancer_type}}/lioness/{{norm_method}}-{{ref_net}}.fea"
+    log:
+        "logs/lioness/{cancer_type}/{norm_method}-{ref_net}.log"
+    benchmark:
+        "logs/lioness/{cancer_type}/{norm_method}-{ref_net}.txt"
+    shell:
+        "Rscript workflow/scripts/lioness_run.R "
+        "--expr {input.expr} "
+        "--meta {input.meta} "
+        "--grn {input.grn} "
+        "--output {output} "
+        "&> {log}"
+
+
 
 #### benchmark ####
 
@@ -319,6 +339,28 @@ rule clustering:
         nodes = f"{RESULT_DIR}/figures/clustering/{{method}}/{{method}}-nodes-{{norm_method}}-{{ref_net}}.png",
     log:
         "logs/clustering/{method}/{norm_method}-{ref_net}.log"
+    shell:
+        "python workflow/scripts/clustering.py "
+        "--overlaps_edges {input.overlaps_edges} "
+        "--overlaps_nodes {input.overlaps_nodes} "
+        "--meta {input.meta} "
+        "--output_edges {output.edges} "
+        "--output_nodes {output.nodes} "
+        "&> {log}"
+
+
+rule clustering_shared:
+    input:
+        overlaps_edges=f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
+        overlaps_nodes=f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea",
+        meta=f"{DATA_DIR}/{META_FILE}",
+    output:
+        edges=f"{RESULT_DIR}/figures/clustering_shared/{{method}}/{{method}}-edges-{{norm_method}}-{{ref_net}}.png",
+        nodes=f"{RESULT_DIR}/figures/clustering_shared/{{method}}/{{method}}-nodes-{{norm_method}}-{{ref_net}}.png",
+    log:
+        "logs/clustering_shared/{method}/{norm_method}-{ref_net}.log"
+    benchmark:
+        "logs/clustering_shared/{method}/{norm_method}-{ref_net}.txt"
     shell:
         "python workflow/scripts/clustering.py "
         "--overlaps_edges {input.overlaps_edges} "
@@ -428,6 +470,13 @@ rule all:
             norm_method = NORM_METHODS,
             ref_net =["exp","string"]
         ),
+        expand("{result_dir}/patient_networks/{cancer_type}/{method}/{norm_method}-{ref_net}.fea",
+               result_dir=RESULT_DIR,
+               cancer_type = CANCER_TYPES,
+               method = "lioness",
+               norm_method = NORM_METHODS,
+               ref_net = "exp"
+        ),
 
         # clustering heatmaps
         expand("{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-{ref_net}.png",
@@ -436,6 +485,16 @@ rule all:
         expand("{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS
         ),
+
+        # clustering heatmaps shared
+        expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-{ref_net}.png",
+               result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
+               ),
+        expand(
+        "{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
+        result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS
+        ),
+
 
         # clustering benchmark
         expand(rules.clustering_benchmark.output, norm_method=NORM_METHODS),
