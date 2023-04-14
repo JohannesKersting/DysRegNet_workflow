@@ -35,6 +35,7 @@ expression_data1 <- NULL
 meta_data <- as.data.frame(fread(args$meta))
 reference_network <- as.data.frame(fread(args$grn))
 
+
 print("make sure the genes in the reference file are in the expression data")
 names(reference_network)[1] <- "SYMBOL_TF" 
 names(reference_network)[2] <- "SYMBOL_TG" 
@@ -45,9 +46,7 @@ expression_data_filtered <- expression_data %>% filter(rownames(expression_data)
 expression_data_filtered <- expression_data_filtered %>% select(meta_data$sample)
 
 print("run lioness")
-se <- SummarizedExperiment(assays = list(counts = as.matrix(expression_data_filtered)), 
-                           colData = meta_data, rowData = expression_data_filtered)
-lioness_result <- lioness(se, netFun)
+lioness_result <- lioness(as.matrix(expression_data_filtered), netFun)
 print(lioness_result)
 result <- assay(lioness_result)
 lioness_result <- NULL
