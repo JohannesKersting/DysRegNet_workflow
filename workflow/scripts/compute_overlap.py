@@ -14,6 +14,14 @@ import argparse
 
 
 def get_sets(input_list, index_col, only_shared_edges, sign):
+    """
+
+    :param input_list: list with paths to patient-specific networks
+    :param index_col: name of colum, which should be used as index
+    :param only_shared_edges: filter all edges and nodes, which do not appear in all input networks
+    :param sign: 0 -> look at all edges wich are not 0, sign > 0 -> look only at positive edges, sigh < 0 -> look only at negativ edges
+    :return: (patient_list, edges, nodes)
+    """
     # list of node sets (one set for every patient)
     nodes = []
 
@@ -141,7 +149,7 @@ def combined_overlaps(patient_list, index_col, pos, neg):
     overlap_pos = overlap_mat(patient_list, pos)
     overlap_neg = overlap_mat(patient_list, neg)
     overlap = (overlap_pos + overlap_neg) / 2
-    overlap.reset_index(names=index_col)
+    overlap = overlap.reset_index(names=index_col)
     return overlap
 
 
@@ -221,15 +229,6 @@ def main():
         print(overlap_nodes)
         overlap_nodes.to_feather(output_nodes)
         overlap_nodes= None
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":

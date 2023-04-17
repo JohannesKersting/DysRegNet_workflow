@@ -328,6 +328,26 @@ rule compute_overlap_shared:
         "--output_nodes {output.nodes} "
         "&> {log}"
 
+rule compute_overlap_shared_signed:
+    input:
+        expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
+            result_dir=RESULT_DIR,cancer_type=CANCER_TYPES),
+    output:
+        edges = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}_signed/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
+        nodes = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}_signed/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
+    log:
+        "logs/compute_overlap_shared/{method}_signed/overlap-{norm_method}-{ref_net}.log"
+    benchmark:
+        "logs/compute_overlap_shared/{method}_signed/overlap-{norm_method}-{ref_net}.benchmark.txt"
+    shell:
+        "python workflow/scripts/compute_overlap.py "
+        "--input {input} "
+        "--shared "
+        "--signed "
+        "--output_edges {output.edges} "
+        "--output_nodes {output.nodes} "
+        "&> {log}"
+
 
 rule clustering:
     input:
@@ -348,7 +368,6 @@ rule clustering:
         "--output_nodes {output.nodes} "
         "&> {log}"
 
-
 rule clustering_shared:
     input:
         overlaps_edges=f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
@@ -360,7 +379,7 @@ rule clustering_shared:
     log:
         "logs/clustering_shared/{method}/{norm_method}-{ref_net}.log"
     benchmark:
-        "logs/clustering_shared/{method}/{norm_method}-{ref_net}.txt"
+        "logs/clustering_shared/{method}/{norm_method}-{ref_net}.benchmark.txt"
     shell:
         "python workflow/scripts/clustering.py "
         "--overlaps_edges {input.overlaps_edges} "
@@ -393,7 +412,7 @@ rule clustering_benchmark_shared:
     input:
         input = lambda wildcards:
             expand("{result_dir}/benchmark/compute_overlap_shared/{method}/overlap_edges-{{norm_method}}-{ref_net}.fea",
-                result_dir=RESULT_DIR, method=METHODS, ref_net=get_shared_ref_net_names(wildcards.norm_method)
+                result_dir=RESULT_DIR, method=METHODS+["dysregnet_signed"], ref_net=get_shared_ref_net_names(wildcards.norm_method)
             ),
         meta = f"{DATA_DIR}/{META_FILE}",
     output:
