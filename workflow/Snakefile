@@ -21,6 +21,7 @@ KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
 CANCER_TYPES = ["COAD", "LUSC", "STAD", "LUAD", "THCA", "HNSC", "LIHC", "PRAD", "KIRC", "BRCA", "KIRP"]
 NORM_METHODS = ["tpm", "mrn"]
 METHODS = ["dysregnet", "ssn"]
+OL_METHODS = METHODS+["dysregnet_signed"] # method names, dysregnet also has "_signed" extension
 
 # map different normalization methods to their sample sheets
 META_MAP = {"tpm":"tpm", "mrn":"expected_counts"}
@@ -30,6 +31,7 @@ wildcard_constraints:
     cancer_type="|".join(CANCER_TYPES+["shared"]),
     norm_method="|".join(NORM_METHODS),
     method = "|".join(METHODS),
+    ol_method = "|".join(OL_METHODS)
 
 # helper functions
 
@@ -351,14 +353,14 @@ rule compute_overlap_shared_signed:
 
 rule clustering:
     input:
-        overlaps_edges = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
-        overlaps_nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea",
+        overlaps_edges = f"{RESULT_DIR}/benchmark/compute_overlap/{{ol_method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
+        overlaps_nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{ol_method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea",
         meta = f"{DATA_DIR}/{META_FILE}",
     output:
-        edges = f"{RESULT_DIR}/figures/clustering/{{method}}/{{method}}-edges-{{norm_method}}-{{ref_net}}.png",
-        nodes = f"{RESULT_DIR}/figures/clustering/{{method}}/{{method}}-nodes-{{norm_method}}-{{ref_net}}.png",
+        edges = f"{RESULT_DIR}/figures/clustering/{{ol_method}}/{{ol_method}}-edges-{{norm_method}}-{{ref_net}}.png",
+        nodes = f"{RESULT_DIR}/figures/clustering/{{ol_method}}/{{ol_method}}-nodes-{{norm_method}}-{{ref_net}}.png",
     log:
-        "logs/clustering/{method}/{norm_method}-{ref_net}.log"
+        "logs/clustering/{ol_method}/{norm_method}-{ref_net}.log"
     shell:
         "python workflow/scripts/clustering.py "
         "--overlaps_edges {input.overlaps_edges} "
@@ -370,16 +372,16 @@ rule clustering:
 
 rule clustering_shared:
     input:
-        overlaps_edges=f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
-        overlaps_nodes=f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea",
+        overlaps_edges=f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{ol_method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
+        overlaps_nodes=f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{ol_method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea",
         meta=f"{DATA_DIR}/{META_FILE}",
     output:
-        edges=f"{RESULT_DIR}/figures/clustering_shared/{{method}}/{{method}}-edges-{{norm_method}}-{{ref_net}}.png",
-        nodes=f"{RESULT_DIR}/figures/clustering_shared/{{method}}/{{method}}-nodes-{{norm_method}}-{{ref_net}}.png",
+        edges=f"{RESULT_DIR}/figures/clustering_shared/{{ol_method}}/{{ol_method}}-edges-{{norm_method}}-{{ref_net}}.png",
+        nodes=f"{RESULT_DIR}/figures/clustering_shared/{{ol_method}}/{{ol_method}}-nodes-{{norm_method}}-{{ref_net}}.png",
     log:
-        "logs/clustering_shared/{method}/{norm_method}-{ref_net}.log"
+        "logs/clustering_shared/{ol_method}/{norm_method}-{ref_net}.log"
     benchmark:
-        "logs/clustering_shared/{method}/{norm_method}-{ref_net}.benchmark.txt"
+        "logs/clustering_shared/{ol_method}/{norm_method}-{ref_net}.benchmark.txt"
     shell:
         "python workflow/scripts/clustering.py "
         "--overlaps_edges {input.overlaps_edges} "
@@ -412,7 +414,7 @@ rule clustering_benchmark_shared:
     input:
         input = lambda wildcards:
             expand("{result_dir}/benchmark/compute_overlap_shared/{method}/overlap_edges-{{norm_method}}-{ref_net}.fea",
-                result_dir=RESULT_DIR, method=METHODS+["dysregnet_signed"], ref_net=get_shared_ref_net_names(wildcards.norm_method)
+                result_dir=RESULT_DIR, method=["dysregnet_signed"]+METHODS, ref_net=get_shared_ref_net_names(wildcards.norm_method)
             ),
         meta = f"{DATA_DIR}/{META_FILE}",
     output:
@@ -502,10 +504,10 @@ rule all:
 
         # clustering heatmaps shared
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-{ref_net}.png",
-            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
+            result_dir=RESULT_DIR, method=["dysregnet_signed", "dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
         ),
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
-            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS
+            result_dir=RESULT_DIR, method=["dysregnet_signed", "dysregnet", "ssn"], norm_method=NORM_METHODS
         ),
 
         # clustering benchmark

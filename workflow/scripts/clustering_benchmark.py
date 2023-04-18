@@ -139,7 +139,7 @@ def main():
     sns.set(font_scale=0.8, style="whitegrid")
 
     g = sns.barplot(x="method", hue="network", y="F1", data=input_df, palette="Set2")
-    g.set(xticklabels=["DysRegNet", "SSN"], ylim=(0, 1))
+    g.set(ylim=(0, 1))
     g.legend(loc=0)
     plt.tight_layout() # else saving will cut of the axis labels
 
