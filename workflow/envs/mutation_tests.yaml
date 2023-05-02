@@ -1,0 +1,14 @@
+name: drn_mutation_tests
+channels:
+- conda-forge
+- bioconda
+- nodefaults
+- ejolly
+dependencies:
+- python =3.8
+- scikit-learn =1.1.3
+- pandas =1.5.1
+- pyarrow =11.0.0
+- scipy =1.9.3
+- statsmodels =0.13.5
+- pymer4 =0.8.0
