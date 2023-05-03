@@ -475,6 +475,29 @@ rule methylation_plots:
         "&> {log}"
 
 
+rule mutation_tests:
+    input:
+        mutations = f"{DATA_DIR}/omics_analysis/somatic_mutations_Unified.csv",
+        networks = lambda wildcards: expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{ref_net}.fea",
+            zip,
+            result_dir=[RESULT_DIR]*len(CANCER_TYPES), cancer_type=CANCER_TYPES, ref_net=get_ref_net_names(wildcards.ref_net_type, wildcards.norm_method)),
+    output:
+        local_out = f"{RESULT_DIR}/omics_analysis/mutation_tests/{{method}}/mut_tests_local-{{norm_method}}-{{ref_net_type}}.csv",
+        global_out = f"{RESULT_DIR}/omics_analysis/mutations_tests/{{method}}/mut_tests_global-{{norm_method}}-{{ref_net_type}}.csv"
+    log:
+        "logs/mutation_tests/{method}/{norm_method}-{ref_net_type}.log"
+    conda:
+        "envs/mutation_tests.yaml"
+    shell:
+        "python workflow/scripts/mutation_tests.py "
+        "--mutations {input.mutations} "
+        "--networks {input.networks} "
+        "--output_local {output.local_out} "
+        "--output_global {output.global_out} "
+        "&> {log}"
+
+
+
 
 
 rule all:
@@ -517,7 +540,11 @@ rule all:
         expand(rules.clustering_benchmark_shared.output, norm_method=NORM_METHODS),
 
         # methylation plots
-        expand(rules.methylation_plots.output, method=["dysregnet","ssn"], norm_method=NORM_METHODS)
+        expand(rules.methylation_plots.output, method=["dysregnet","ssn"], norm_method=NORM_METHODS),
+
+        # mutation tests
+        [expand(rules.mutation_tests.output, method=["dysregnet","ssn"], norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method))
+         for norm_method in NORM_METHODS]
 
     default_target: True
 
