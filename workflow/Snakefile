@@ -483,7 +483,7 @@ rule mutation_tests:
             result_dir=[RESULT_DIR]*len(CANCER_TYPES), cancer_type=CANCER_TYPES, ref_net=get_ref_net_names(wildcards.ref_net_type, wildcards.norm_method)),
     output:
         local_out = f"{RESULT_DIR}/omics_analysis/mutation_tests/{{method}}/mut_tests_local-{{norm_method}}-{{ref_net_type}}.csv",
-        global_out = f"{RESULT_DIR}/omics_analysis/mutations_tests/{{method}}/mut_tests_global-{{norm_method}}-{{ref_net_type}}.csv"
+        global_out = f"{RESULT_DIR}/omics_analysis/mutation_tests/{{method}}/mut_tests_global-{{norm_method}}-{{ref_net_type}}.csv"
     log:
         "logs/mutation_tests/{method}/{norm_method}-{ref_net_type}.log"
     conda:
@@ -497,6 +497,30 @@ rule mutation_tests:
         "&> {log}"
 
 
+rule mutation_plots:
+    input:
+        inputs_local = lambda wildcards: expand(
+            rules.mutation_tests.output.local_out,
+            ref_net_type=get_ref_net_types(wildcards.norm_method),
+            method=wildcards.method,
+            norm_method=wildcards.norm_method,
+        ),
+        inputs_global = lambda wildcards: expand(
+            rules.mutation_tests.output.global_out,
+            ref_net_type=get_ref_net_types(wildcards.norm_method),
+            method=wildcards.method,
+            norm_method=wildcards.norm_method,
+        ),
+    output:
+        f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation-{{method}}-{{norm_method}}.png"
+    log:
+        "logs/mutation_plots/{method}-{norm_method}.log"
+    shell:
+        "python workflow/scripts/mutation_plots.py "
+        "--inputs_local {input.inputs_local} "
+        "--inputs_global {input.inputs_global} "
+        "--output {output} "
+        "&> {log}"
 
 
 
@@ -544,7 +568,10 @@ rule all:
 
         # mutation tests
         [expand(rules.mutation_tests.output, method=["dysregnet","ssn"], norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method))
-         for norm_method in NORM_METHODS]
+         for norm_method in NORM_METHODS],
+
+        # mutation plots
+        expand(rules.mutation_plots.output, method=["dysregnet", "ssn"], norm_method=NORM_METHODS),
 
     default_target: True
 
