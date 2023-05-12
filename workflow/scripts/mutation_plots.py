@@ -24,7 +24,7 @@ def get_input_info(path):
 
     # get overlap_type, norm method and the reference network
     stem_name, file_extension = os.path.splitext(file_name)
-    test_type, norm_method, ref_network = stem_name.split("-")
+    test_type, norm_method, ref_network, min_patients = stem_name.split("-")
 
     # shorten refernece network name (for genie3 shared and individual)
     ref_network_split = ref_network.split("_")
@@ -94,11 +94,12 @@ def main():
 
     # plot
     sns.set(style="whitegrid")
-    palette = sns.color_palette(cc.glasbey_light, n_colors=len(set(mutation_test_df["Cancer"])) + 1)[1:]
+    # palette = sns.color_palette(cc.glasbey_light, n_colors=len(set(mutation_test_df["Cancer"])) + 1)[1:]
+    # sns.set_palette(palette)
 
     g = sns.FacetGrid(data=mutation_test_df, col="network", height=3, aspect=1.6, col_wrap=2)
     g.map_dataframe(sns.scatterplot, x="n_tfs", y="% of significant associations", hue="Cancer", style="Globally sig.",
-                    palette=palette, s=90, style_order=["no", "yes"])
+                    s=90, style_order=["no", "yes"])
     g.add_legend()
     g.set_axis_labels("Number of tests")
     g.set_titles(col_template="{col_name}")

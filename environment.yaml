@@ -14,7 +14,7 @@ dependencies:
 - matplotlib =3.6.3
 - statsmodels =0.13.5
 - networkx =2.8.4
-- seaborn =0.11.2
+- seaborn =0.12.1
 - colorcet =3.0.1
 - munkres =1.1.4
 - pip

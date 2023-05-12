@@ -116,6 +116,8 @@ def main():
                         help='Path to output of local tests')
     parser.add_argument('--output_global', type=str, required=True,
                         help='Path to output of global test')
+    parser.add_argument('--n_mut_patients',  type=int, required=True,
+                        help='Minimum number of samples, a TF needs to be mutated in to be analyzed')
     args = parser.parse_args()
 
     print(f"Python version:\n{sys.version}")
@@ -125,7 +127,7 @@ def main():
     input_paths = args.networks
     output_local = args.output_local
     output_global = args.output_global
-    n_min_patients = 2
+    n_mut_patients = args.n_mut_patients
 
     # cancer type is expected to be in the third last position of the splitted path
     input_map = {os.path.normpath(path).split(os.sep)[-3]: path for path in input_paths}
@@ -155,11 +157,11 @@ def main():
         # get tfs, mutated tfs, and tfs with enough mutated patients
         tfs = {tf for tf, tg in net.columns}
         tfs_mut = tfs.intersection(gene2samples.keys())
-        tfs_enough_mut = [tf for tf in tfs_mut if len(gene2samples[tf]) >= n_min_patients]
+        tfs_enough_mut = [tf for tf in tfs_mut if len(gene2samples[tf]) >= n_mut_patients]
 
         print(f"Patients with mutation data: {len(patients_mut)}/{len(net.index)}")
         print(f"TFs with > 0 mutated patients: {len(tfs_mut)}/{len(tfs)}")
-        print(f"TFs with >= {n_min_patients} mutated patients: {len(tfs_enough_mut)}/{len(tfs)}")
+        print(f"TFs with >= {n_mut_patients} mutated patients: {len(tfs_enough_mut)}/{len(tfs)}")
 
         if len(tfs_enough_mut) == 0:
             continue
