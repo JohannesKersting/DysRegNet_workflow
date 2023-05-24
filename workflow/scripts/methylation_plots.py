@@ -123,7 +123,7 @@ def main():
 
     for index, row in methylation_test_df.iterrows():
         p = ax.patches[index]
-        if row["global p-value"] <= 0.5:
+        if row["global p-value"] < 0.05:
             ax.annotate("*",
                         (p.get_x() + p.get_width() + 0.3, p.get_y() + 0.25),
                         xytext=(0, 0),

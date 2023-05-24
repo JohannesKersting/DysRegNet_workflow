@@ -94,13 +94,11 @@ def main():
 
     # plot
     sns.set(style="whitegrid")
-    # palette = sns.color_palette(cc.glasbey_light, n_colors=len(set(mutation_test_df["Cancer"])) + 1)[1:]
-    # sns.set_palette(palette)
+    palette = sns.color_palette(cc.glasbey_light, n_colors=len(set(mutation_test_df["Cancer"])) + 1)[1:]
 
-    g = sns.FacetGrid(data=mutation_test_df, col="network", height=3, aspect=1.6, col_wrap=2)
-    g.map_dataframe(sns.scatterplot, x="n_tfs", y="% of significant associations", hue="Cancer", style="Globally sig.",
-                    s=90, style_order=["no", "yes"])
-    g.add_legend()
+    g = sns.relplot(data=mutation_test_df, x="n_tfs", y="% of significant associations", hue="Cancer",
+                    style="Globally sig.", col="network",
+                    s=90, style_order=["no", "yes"], height=3, aspect=1.6, col_wrap=2, palette=palette)
     g.set_axis_labels("Number of tests")
     g.set_titles(col_template="{col_name}")
     g.tight_layout()
