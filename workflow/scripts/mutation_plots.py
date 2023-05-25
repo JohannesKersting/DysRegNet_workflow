@@ -94,11 +94,14 @@ def main():
 
     # plot
     sns.set(style="whitegrid")
-    palette = sns.color_palette(cc.glasbey_light, n_colors=len(set(mutation_test_df["Cancer"])) + 1)[1:]
+    cancer_types = sorted(list(set(mutation_test_df["Cancer"])))
+    palette = sns.color_palette(cc.glasbey_light, n_colors=len(cancer_types) + 1)[1:]
+    palette_dict = dict(zip(cancer_types, palette))
 
     g = sns.relplot(data=mutation_test_df, x="n_tfs", y="% of significant associations", hue="Cancer",
                     style="Globally sig.", col="network",
-                    s=90, style_order=["no", "yes"], height=3, aspect=1.6, col_wrap=2, palette=palette)
+                    s=90, style_order=["no", "yes"], hue_order=cancer_types, height=3, aspect=1.6, col_wrap=2,
+                    palette=palette_dict)
     g.set_axis_labels("Number of tests")
     g.set_titles(col_template="{col_name}")
     g.tight_layout()
