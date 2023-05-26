@@ -45,6 +45,9 @@ def main():
     parser.add_argument('--output',  type=str, required=True,
                         help='Output path to the result .png (will also be saved as .pdf)')
 
+    parser.add_argument('--output_global',  type=str, required=True,
+                        help='Output path to the result .png (will also be saved as .pdf)')
+
     args = parser.parse_args()
 
     print(f"Python version:\n{sys.version}")
@@ -53,6 +56,7 @@ def main():
     input_paths_local = args.inputs_local
     input_paths_global = args.inputs_global
     output_path = args.output
+    output_global_path = args.output_global
 
     # map input files
     method_lut = {"dysregnet": "DysRegNet",
@@ -108,6 +112,22 @@ def main():
 
     plt.savefig(output_path, dpi=300)
     plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)
+
+
+    # global p-values plot
+    sns.set(style="whitegrid")
+    plt.figure(figsize=(8, 4))
+    mutation_test_df["transformed_pval"] = -np.log10(mutation_test_df["global_pval"])
+
+    g = sns.barplot(x="Cancer", hue="network", y="transformed_pval", data=mutation_test_df,
+                    palette="Set2", dodge=True)
+    g.axhline(-np.log10(0.05), ls="--", label="0.05 significance threshold")
+    g.set(ylabel='-log10(p-value)')
+    g.legend()
+    plt.tight_layout()
+
+    plt.savefig(output_global_path, dpi=300)
+    plt.savefig(os.path.splitext(output_global_path)[0] + '.pdf', dpi=300)
 
 
 if __name__ == "__main__":

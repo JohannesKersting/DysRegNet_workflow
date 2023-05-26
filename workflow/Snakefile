@@ -515,14 +515,16 @@ rule mutation_plots:
             n_mut_patients=wildcards.n_mut_patients,
         ),
     output:
-        f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png"
+        both=f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png",
+        global_pvals=f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation_global-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png"
     log:
         "logs/mutation_plots/{method}-{norm_method}-min{n_mut_patients}.log"
     shell:
         "python workflow/scripts/mutation_plots.py "
         "--inputs_local {input.inputs_local} "
         "--inputs_global {input.inputs_global} "
-        "--output {output} "
+        "--output {output.both} "
+        "--output_global {output.global_pvals} "
         "&> {log}"
 
 
