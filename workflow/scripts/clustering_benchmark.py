@@ -114,7 +114,7 @@ def main():
     # get infos from input paths
     method_lut = {"dysregnet": "DysRegNet",
                   "ssn": "SSN",
-                  "dysregnet_signed": "DysRegNet_signed",
+                  "dysregnet_signed": "DysRegNet",
                   }
     network_lut = {"exp": "experimental",
                    "string": "string",

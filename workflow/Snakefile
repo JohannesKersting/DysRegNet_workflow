@@ -414,7 +414,7 @@ rule clustering_benchmark_shared:
     input:
         input = lambda wildcards:
             expand("{result_dir}/benchmark/compute_overlap_shared/{method}/overlap_edges-{{norm_method}}-{ref_net}.fea",
-                result_dir=RESULT_DIR, method=["dysregnet_signed"]+METHODS, ref_net=get_shared_ref_net_names(wildcards.norm_method)
+                result_dir=RESULT_DIR, method=["dysregnet_signed","ssn"], ref_net=get_shared_ref_net_names(wildcards.norm_method)
             ),
         meta = f"{DATA_DIR}/{META_FILE}",
     output:
