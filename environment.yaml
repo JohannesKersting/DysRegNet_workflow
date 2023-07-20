@@ -19,7 +19,7 @@ dependencies:
 - munkres =1.1.4
 - pip
 - pip:
-    - dysregnet ==0.0.3
+    - dysregnet ==0.0.4
 - r-base =4.2.2
 - r-data.table =1.14.6
 - r-argparse =2.1.6

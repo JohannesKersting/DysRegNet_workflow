@@ -26,7 +26,10 @@ parser.add_argument('--grn', type=str, required=True,
                     help='Path to a reference network in CSV format. The first two columns will be selected and TF and TG cols.'
                     )
 parser.add_argument('--output', type=str, required=True,
-                    help='The output file path and name.'
+                    help='The output file path (feather).'
+                    )
+parser.add_argument('--output_stats', type=str, required=True,
+                    help='The stats output file path (csv).'
                     )
 
 args = parser.parse_args()
@@ -93,6 +96,7 @@ data=dysregnet.run(expression_data=expr,
                    conCol=conCol)
 
 result = data.get_results()
+stats = data.get_model_stats()
 
 # feather needs str column names
 result.columns = [str(x) for x in result.columns]
@@ -101,9 +105,14 @@ result.columns = [str(x) for x in result.columns]
 print("Result:")
 print(result)
 
+print("Stats:")
+print(stats)
+
+
+
 # This works only with applied condition criterion for dysregnet
-col_sums = result[result.columns[1:]].apply(np.sum, axis=0)
-not_zero = np.sum(np.sum(result[result.columns[1:]]!=0))
+col_sums = result.apply(np.sum, axis=0)
+not_zero = np.sum(np.sum(result!=0))
 
 print(f"Number of total dysregulations: {not_zero}")
 print(f"Number of edges with at least one dysregulation: {np.sum(col_sums!=0)}")
@@ -112,4 +121,7 @@ print(f"Number of negative slopes: {np.sum(col_sums<0)}")
 
 
 # Write output
+result.reset_index(names="patient id", inplace=True)
 result.to_feather(args.output)
+
+stats.to_csv(args.output_stats)

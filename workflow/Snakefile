@@ -244,7 +244,9 @@ rule dysregnet:
         meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
         grn =  get_ref_net_path
     output:
-        f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}.fea"
+        networks = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}.fea",
+        stats = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}-stats.csv",
+
     log:
         "logs/dysregnet/{cancer_type}/{norm_method}-{ref_net}.log"
     shell:
@@ -252,7 +254,8 @@ rule dysregnet:
         "--expr {input.expr} "
         "--meta {input.meta} "
         "--grn {input.grn} "
-        "--output {output} "
+        "--output {output.networks} "
+        "--output_stats {output.stats} " 
         "&> {log}"
 
 
