@@ -42,7 +42,7 @@ print(args)
 print("\n")
 
 conCov = ["birth_days_to"]
-catCov = ["gender", "race"]
+catCovCandidates = ["gender", "race"]
 conCol = "condition"
 idCol = "sample"
 
@@ -54,8 +54,12 @@ grn = pd.read_csv(args.grn)
 
 # Pre-process data
 
-meta = meta[ [idCol, conCol] + conCov + catCov ]
+meta = meta[ [idCol, conCol] + conCov + catCovCandidates ]
+
+# fill missing age values with the mean, standardize it based on the control samples, and flip sign (higher value -> older)
 meta["birth_days_to"] = meta["birth_days_to"].fillna(meta["birth_days_to"].mean())
+meta["birth_days_to"] = -(meta["birth_days_to"] - meta.loc[meta[conCol]==0, "birth_days_to"].mean()) / meta.loc[meta[conCol]==0, "birth_days_to"].std()
+
 meta['race'] = meta['race'].fillna('not reported')
 meta["race"] = meta["race"].replace({"[Unknown]": 'not reported', "[Not Evaluated]":'not reported'})
 
@@ -64,6 +68,7 @@ if not all(expr.columns == meta[idCol]):
     raise ValueError(f"Column names of expression differ from '{idCol}' column in meta")
 expr = expr.T
 expr.insert(0, idCol, expr.index) # dysregnet wants ids in first column
+
 
 grn = grn.iloc[:, 0:2]
 
@@ -83,9 +88,18 @@ print("\nMeta composition:\n")
 print(meta.groupby(conCol).size())
 print("\n")
 
-for covar in catCov:
+for covar in catCovCandidates:
     print(pd.crosstab(meta[covar],meta[conCol]))
     print("")
+
+# only add categorical confounders with more than one value in the control samples
+catCov = []
+for cov in catCovCandidates:
+    if len(set(meta.loc[meta[conCol]==0,cov].values)) > 1:
+        catCov.append(cov)
+    else:
+        print(f'"{cov}" was not added as confounder because of zero variance in the control samples')
+
 
 # Run dysregnet
 data=dysregnet.run(expression_data=expr,
