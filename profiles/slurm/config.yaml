@@ -23,8 +23,8 @@ rerun-triggers: [mtime, params, input]
 rerun-incomplete: True
 
 default-resources:
-  - partition=exbio-cpu
-  - exclude="bert.exbio.wzw.tum.de"
+  - partition=shared-cpu
+#  - exclude="bert.exbio.wzw.tum.de"
   - mem_mb=20000
 #  - nodelist="elmo.exbio.wzw.tum.de,ernie.exbio.wzw.tum.de,grover.exbio.wzw.tum.de,kermit.exbio.wzw.tum.de"
 

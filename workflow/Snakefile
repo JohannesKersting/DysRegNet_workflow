@@ -21,6 +21,7 @@ KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
 CANCER_TYPES = ["COAD", "LUSC", "STAD", "LUAD", "THCA", "HNSC", "LIHC", "PRAD", "KIRC", "BRCA", "KIRP"]
 NORM_METHODS = ["tpm", "mrn"]
 METHODS = ["dysregnet", "ssn"]
+REF_NET_TYPES = ['exp', 'string', 'genie3_shared', 'genie3_individual']
 OL_METHODS = METHODS+["dysregnet_signed"] # method names, dysregnet also has "_signed" extension
 
 # map different normalization methods to their sample sheets
@@ -452,6 +453,7 @@ rule methylation_tests:
         "--output_global {output.global_out} "
         "&> {log}"
 
+
 rule methylation_plots:
     input:
         inputs_local = lambda wildcards: expand(
@@ -531,6 +533,31 @@ rule mutation_plots:
         "&> {log}"
 
 
+rule model_stats_plots:
+    input:
+        lambda wildcards: expand("{result_dir}/patient_networks/{cancer_type}/dysregnet/{norm_method}-{ref_net}-stats.csv", zip,
+        result_dir=[RESULT_DIR] * len(CANCER_TYPES) * len(REF_NET_TYPES),
+        norm_method=[wildcards.norm_method] * len(CANCER_TYPES) * len(REF_NET_TYPES),
+        cancer_type=CANCER_TYPES * len(REF_NET_TYPES),
+        ref_net=[ref_net for ref_net_type in REF_NET_TYPES for ref_net in get_ref_net_names(ref_net_type,wildcards.norm_method)],
+        )
+    output:
+        dir=directory(f"{RESULT_DIR}/figures/model_stats/{{norm_method}}/"),
+        stats_summary=f"{RESULT_DIR}/model_stats_summary/{{norm_method}}-model_stats_summary.tsv"
+    log:
+        "logs/model_stats_plots/{norm_method}.log"
+    shell:
+        "mkdir -p {output.dir} && "
+        "python workflow/scripts/model_stats_plots.py "
+        "--inputs {input} "
+        "--norm_method {wildcards.norm_method} "
+        "--output_dir {output.dir} "
+        "--output_stats_summary {output.stats_summary} "
+        "&> {log}"
+
+
+
+
 
 rule all:
     input:
@@ -548,14 +575,14 @@ rule all:
         ),
 
         # clustering heatmaps
-        expand("{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-{ref_net}.png",
-               result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
-               ),
         expand(
-        "{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
-        result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS
+            "{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-{ref_net}.png",
+            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
         ),
-
+        expand(
+            "{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
+            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS
+        ),
 
         # clustering heatmaps shared
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-{ref_net}.png",
@@ -580,6 +607,9 @@ rule all:
 
         # mutation plots
         expand(rules.mutation_plots.output, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, n_mut_patients=[2,4,6]),
+
+        # model stats
+        expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
 
     default_target: True
 
