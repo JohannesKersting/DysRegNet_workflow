@@ -185,6 +185,22 @@ rule mrn_normalization:
         "Rscript workflow/scripts/mrn_normalization.R {input.expr} {input.meta} {output} >& {log}"
 
 
+#### methylation data pre-processing
+
+rule methylation_zscoring:
+    input:
+        methylation=f"{DATA_DIR}/omics_analysis/methylation.csv",
+        meta=f"{DATA_DIR}/{META_FILE}",
+    output:
+        f"{DATA_DIR}/omics_analysis/methylation_absolute_zscores.csv"
+    log:
+        "logs/methylation_zscoring.log"
+    shell:
+        "python workflow/scripts/methylation_zscoring.py "
+        "--methylation {input.methylation} "
+        "--meta {input.meta} "
+        "--output {output} &> {log}"
+
 
 #### reference network creation ####
 
@@ -454,6 +470,26 @@ rule methylation_tests:
         "&> {log}"
 
 
+rule methylation_zscores_tests:
+    input:
+        methylation = rules.methylation_zscoring.output,
+        networks = lambda wildcards: expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{ref_net}.fea",
+            zip,
+            result_dir=[RESULT_DIR]*len(CANCER_TYPES), cancer_type=CANCER_TYPES, ref_net=get_ref_net_names(wildcards.ref_net_type, wildcards.norm_method)),
+    output:
+        local_out = f"{RESULT_DIR}/omics_analysis/methylation_zscores_tests/{{method}}/meth_tests_local-{{norm_method}}-{{ref_net_type}}.npy",
+        global_out = f"{RESULT_DIR}/omics_analysis/methylation_zscores_tests/{{method}}/meth_tests_global-{{norm_method}}-{{ref_net_type}}.npy"
+    log:
+        "logs/methylation_zscores_tests/{method}/{norm_method}-{ref_net_type}.log"
+    shell:
+        "python workflow/scripts/methylation_tests.py "
+        "--methylation {input.methylation} "
+        "--networks {input.networks} "
+        "--output_local {output.local_out} "
+        "--output_global {output.global_out} "
+        "&> {log}"
+
+
 rule methylation_plots:
     input:
         inputs_local = lambda wildcards: expand(
@@ -469,7 +505,7 @@ rule methylation_plots:
             norm_method=wildcards.norm_method,
         ),
     output:
-        f"{RESULT_DIR}/figures/omics_analysis/{{method}}/methylation-{{method}}-{{norm_method}}.png"
+        f"{RESULT_DIR}/figures/omics_analysis/{{method}}/methylation/methylation-{{method}}-{{norm_method}}.png"
     log:
         "logs/methylation_plots/{method}-{norm_method}.log"
     shell:
@@ -478,6 +514,33 @@ rule methylation_plots:
         "--inputs_global {input.inputs_global} "
         "--output {output} "
         "&> {log}"
+
+
+rule methylation_zscores_plots:
+    input:
+        inputs_local = lambda wildcards: expand(
+            rules.methylation_zscores_tests.output.local_out,
+            ref_net_type=get_ref_net_types(wildcards.norm_method),
+            method=wildcards.method,
+            norm_method=wildcards.norm_method,
+        ),
+        inputs_global = lambda wildcards: expand(
+            rules.methylation_zscores_tests.output.global_out,
+            ref_net_type=get_ref_net_types(wildcards.norm_method),
+            method=wildcards.method,
+            norm_method=wildcards.norm_method,
+        ),
+    output:
+        f"{RESULT_DIR}/figures/omics_analysis/{{method}}/methylation_zscores/methylation_zscores-{{method}}-{{norm_method}}.png"
+    log:
+        "logs/methylation_zscores_plots/{method}-{norm_method}.log"
+    shell:
+        "python workflow/scripts/methylation_plots.py "
+        "--inputs_local {input.inputs_local} "
+        "--inputs_global {input.inputs_global} "
+        "--output {output} "
+        "&> {log}"
+
 
 
 rule mutation_tests:
@@ -520,8 +583,8 @@ rule mutation_plots:
             n_mut_patients=wildcards.n_mut_patients,
         ),
     output:
-        both=f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png",
-        global_pvals=f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation_global-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png"
+        both=f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation/mutation-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png",
+        global_pvals=f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation/mutation_global-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png"
     log:
         "logs/mutation_plots/{method}-{norm_method}-min{n_mut_patients}.log"
     shell:
@@ -601,6 +664,9 @@ rule all:
         # methylation plots
         expand(rules.methylation_plots.output, method=["dysregnet","ssn"], norm_method=NORM_METHODS),
 
+        # methylation zscores plots
+        expand(rules.methylation_zscores_plots.output, method=["dysregnet", "ssn"], norm_method=NORM_METHODS),
+
         # mutation tests
         [expand(rules.mutation_tests.output, method=["dysregnet","ssn"], norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method),  n_mut_patients=[2,4,6])
          for norm_method in NORM_METHODS],
@@ -610,6 +676,8 @@ rule all:
 
         # model stats
         expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
+
+        rules.methylation_zscoring.output,
 
     default_target: True
 
