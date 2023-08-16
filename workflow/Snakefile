@@ -619,7 +619,49 @@ rule model_stats_plots:
         "&> {log}"
 
 
+#### runtime benchmark ####
 
+rule runtime_dysregnet:
+    input:
+        expr = f"{RESULT_DIR}/expression_processed/THCA/tpm.csv",
+        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/THCA/tpm_meta.csv",
+        grn =  rules.prepare_HTRIdb.output
+    output:
+        networks = f"{RESULT_DIR}/runtime/method_output/dysregnet.fea",
+        stats = f"{RESULT_DIR}/runtime/method_output/dysregnet-stats.csv",
+
+    log:
+        "logs/runtime/dysregnet.log"
+    benchmark:
+        repeat(f"{RESULT_DIR}/runtime/dysregnet.txt", 10)
+    shell:
+        "python workflow/scripts/dysregnet_run.py "
+        "--expr {input.expr} "
+        "--meta {input.meta} "
+        "--grn {input.grn} "
+        "--output {output.networks} "
+        "--output_stats {output.stats} " 
+        "&> {log}"
+
+
+rule runtime_ssn:
+    input:
+        expr = f"{RESULT_DIR}/expression_processed/THCA/tpm.csv",
+        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/THCA/tpm_meta.csv",
+        grn =  rules.prepare_HTRIdb.output
+    output:
+        f"{RESULT_DIR}/runtime/method_output/ssn.fea",
+    log:
+        "logs/runtime/ssn.log"
+    benchmark:
+        repeat(f"{RESULT_DIR}/runtime/ssn.txt", 10)
+    shell:
+        "python workflow/scripts/ssn_run.py "
+        "--expr {input.expr} "
+        "--meta {input.meta} "
+        "--grn {input.grn} "
+        "--output {output} "
+        "&> {log}"
 
 
 rule all:
@@ -677,7 +719,10 @@ rule all:
         # model stats
         expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
 
-        rules.methylation_zscoring.output,
+        # run time benchmark
+        rules.runtime_ssn.benchmark,
+        rules.runtime_dysregnet.benchmark,
+
 
     default_target: True
 
