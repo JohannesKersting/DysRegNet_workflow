@@ -629,7 +629,6 @@ rule runtime_dysregnet:
     output:
         networks = f"{RESULT_DIR}/runtime/method_output/dysregnet.fea",
         stats = f"{RESULT_DIR}/runtime/method_output/dysregnet-stats.csv",
-
     log:
         "logs/runtime/dysregnet.log"
     benchmark:
@@ -662,6 +661,7 @@ rule runtime_ssn:
         "--grn {input.grn} "
         "--output {output} "
         "&> {log}"
+
 
 rule runtime_plots:
     input:
