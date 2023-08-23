@@ -1,18 +1,40 @@
 import pandas as pd
 import json
 from neo4j import GraphDatabase
+from neo4j.exceptions import ServiceUnavailable
 import random
 import time
 import os
+import sys
 import glob
 import math
+import argparse
 from collections import Counter
 
-csv_path = '/home/johannes/Desktop/db_test_data/csv/'
-methylation_path = '/home/johannes/Desktop/db_test_data/methylation.csv'
-mutation_path = '/home/johannes/Desktop/db_test_data/somatic_mutations_Unified.csv'
-network_paths = ['/home/johannes/Desktop/db_test_data/THCA/dysregnet/tpm-exp.fea']
-stats_paths = ['/home/johannes/Desktop/db_test_data/THCA/dysregnet/tpm-exp-stats.csv']
+parser = argparse.ArgumentParser()
+parser.add_argument('--methylation', type=str, required=True,
+                    help='Methylation data in .csv format')
+parser.add_argument('--mutations', type=str, required=True,
+                    help='Mutations data in .csv format')
+parser.add_argument('--networks', nargs='+', required=True,
+                    help='Paths to multiple patient specific networks')
+parser.add_argument('--stats', nargs='+', required=True,
+                    help='Paths to multiple pdysregnet stats files')
+parser.add_argument('--csv_dir', type=str, required=True,
+                    help='Path for writing csv files for database load')
+
+args = parser.parse_args()
+
+print(f"Python version:\n{sys.version}")
+print(f"Arguments:\n{args}\n")
+
+
+csv_path = args.csv_dir
+methylation_path = args.methylation
+mutation_path = args.mutations
+network_paths = args.networks
+stats_paths = args.stats
+
 auth = ('neo4j', '12345678')
 uri = 'bolt://localhost:7687'
 
@@ -288,8 +310,22 @@ def load_db(cancer):
 
 if __name__ == '__main__':
     index = 0
+
     print("Committing overall pre-querys")
-    commit_list(get_pre_query_list())
+    success = False
+    attempt = 0
+    delay = 30
+    while not success and attempt < 5:
+        attempt += 1
+        try:
+            commit_list(get_pre_query_list())
+            success = True
+        except ServiceUnavailable:
+            print(f"Failed to connect to data base in attempt {attempt}")
+            time.sleep(delay)
+    if not success:
+        print("Connection time out")
+        sys.exit(1)
 
     # get cancer list from file names
     cancer_list = [network_path.split("/")[-3] for network_path in network_paths]

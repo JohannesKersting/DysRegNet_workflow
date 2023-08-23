@@ -7,6 +7,7 @@
 /resources/
 /logs/
 /results/
+/neo4j_db/
 
 # PyCharm
 .idea

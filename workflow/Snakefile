@@ -7,6 +7,8 @@ min_version("7.18")
 
 DATA_DIR = "/nfs/data/patients_networks/data"
 RESULT_DIR = "results"
+WORKFLOW_DIR=str(os.path.abspath(str(workflow.current_basedir)+"/../"))
+DB_DIR = os.path.join(WORKFLOW_DIR, "neo4j_db")
 
 
 META_FILE = "expression_raw/TCGA_phenotype_denseDataOnlyDownload.tsv"
@@ -678,6 +680,59 @@ rule runtime_plots:
         "&> {log}"
 
 
+#### database ####
+
+localrules: provide_db, load_db
+
+rule provide_db:
+    output:
+        service("neo4j_service_flag")
+    shell:
+        f'''
+        ln -s /dev/random {{output}} &&
+        docker rm -f -v neo4j_load_db &&
+        mkdir -p {DB_DIR}/data && 
+        mkdir -p {DB_DIR}/csv && 
+        mkdir -p {DB_DIR}/logs &&
+        docker run \
+        --name neo4j_load_db \
+        --user "$(id -u)" \
+        -p7474:7474 -p7687:7687 \
+        -v {DB_DIR}/data:/data \
+        -v {DB_DIR}/csv:/import \
+        -v {DB_DIR}/logs:/logs \
+        -v {WORKFLOW_DIR}/assets/neo4j_conf:/conf \
+        --env NEO4J_AUTH=neo4j/12345678 \
+        neo4j:latest
+        '''
+
+
+rule load_db:
+    input:
+        methylation = '/home/johannes/Desktop/db_test_data/methylation.csv',
+        mutations = '/home/johannes/Desktop/db_test_data/somatic_mutations_Unified.csv',
+        networks = ['/home/johannes/Desktop/db_test_data/THCA/dysregnet/tpm-exp.fea'],
+        stats = ['/home/johannes/Desktop/db_test_data/THCA/dysregnet/tpm-exp-stats.csv'],
+        db_socket = rules.provide_db.output
+    output:
+        db_flag = touch(f'{DB_DIR}/flag.txt')
+    log:
+        "logs/load_db.log"
+    params:
+        csv_dir= f'{DB_DIR}/csv/'
+    conda:
+        "envs/neo4j_python.yaml"
+    shell:
+        "(python workflow/scripts/load_db_csv.py "
+        "--methylation {input.methylation} "
+        "--mutations {input.mutations} "
+        "--networks {input.networks} "
+        "--stats {input.stats} "
+        "--csv_dir {params.csv_dir} "
+        "&& touch {output.db_flag}) "
+        "&> {log}"
+
+
 
 rule all:
     input:
@@ -736,7 +791,6 @@ rule all:
 
         # run time benchmark
         rules.runtime_plots.output,
-
 
     default_target: True
 
