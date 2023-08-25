@@ -22,6 +22,8 @@ parser.add_argument('--stats', nargs='+', required=True,
                     help='Paths to multiple pdysregnet stats files')
 parser.add_argument('--csv_dir', type=str, required=True,
                     help='Path for writing csv files for database load')
+parser.add_argument('--pw', type=str, required=True,
+                    help='Database password')
 
 args = parser.parse_args()
 
@@ -34,8 +36,9 @@ methylation_path = args.methylation
 mutation_path = args.mutations
 network_paths = args.networks
 stats_paths = args.stats
+pw = args.pw
 
-auth = ('neo4j', '12345678')
+auth = ('neo4j', pw)
 uri = 'bolt://localhost:7687'
 
 def get_gene_ids(keys):

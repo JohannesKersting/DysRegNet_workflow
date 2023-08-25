@@ -9,6 +9,7 @@ DATA_DIR = "/nfs/data/patients_networks/data"
 RESULT_DIR = "results"
 WORKFLOW_DIR=str(os.path.abspath(str(workflow.current_basedir)+"/../"))
 DB_DIR = os.path.join(WORKFLOW_DIR, "neo4j_db")
+DB_PW = "fMb8TF5U?kY-HP"
 
 
 META_FILE = "expression_raw/TCGA_phenotype_denseDataOnlyDownload.tsv"
@@ -682,6 +683,10 @@ rule runtime_plots:
 
 #### database ####
 
+# not part of the target rules
+# load manually by running: snakemake --profile <profile> --force load_db
+# old data <DB_DIR>/data has to be deleted manually before updating ist
+
 localrules: provide_db, load_db
 
 rule provide_db:
@@ -694,25 +699,26 @@ rule provide_db:
         mkdir -p {DB_DIR}/data && 
         mkdir -p {DB_DIR}/csv && 
         mkdir -p {DB_DIR}/logs &&
+        chmod -R 777 {DB_DIR} &&
         docker run \
+        --user $UID:$GID \
         --name neo4j_load_db \
-        --user "$(id -u)" \
         -p7474:7474 -p7687:7687 \
         -v {DB_DIR}/data:/data \
         -v {DB_DIR}/csv:/import \
         -v {DB_DIR}/logs:/logs \
         -v {WORKFLOW_DIR}/assets/neo4j_conf:/conf \
-        --env NEO4J_AUTH=neo4j/12345678 \
-        neo4j:latest
+        --env NEO4J_AUTH=neo4j/{DB_PW} \
+        neo4j:5.11.0
         '''
 
 
 rule load_db:
     input:
-        methylation = '/home/johannes/Desktop/db_test_data/methylation.csv',
-        mutations = '/home/johannes/Desktop/db_test_data/somatic_mutations_Unified.csv',
-        networks = ['/home/johannes/Desktop/db_test_data/THCA/dysregnet/tpm-exp.fea'],
-        stats = ['/home/johannes/Desktop/db_test_data/THCA/dysregnet/tpm-exp-stats.csv'],
+        methylation=f"{DATA_DIR}/omics_analysis/methylation.csv",
+        mutations = f"{DATA_DIR}/omics_analysis/somatic_mutations_Unified.csv",
+        networks = expand(rules.dysregnet.output.networks, cancer_type=CANCER_TYPES, norm_method="tpm", ref_net = "genie3_shared_tpm.top_100k"),
+        stats = expand(rules.dysregnet.output.stats, cancer_type=CANCER_TYPES, norm_method="tpm", ref_net = "genie3_shared_tpm.top_100k"),
         db_socket = rules.provide_db.output
     output:
         db_flag = touch(f'{DB_DIR}/flag.txt')
@@ -729,10 +735,12 @@ rule load_db:
         "--networks {input.networks} "
         "--stats {input.stats} "
         "--csv_dir {params.csv_dir} "
+        "--pw {DB_PW} "
         "&& touch {output.db_flag}) "
         "&> {log}"
 
-
+networks = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}.fea",
+stats = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}-stats.csv",
 
 rule all:
     input:
