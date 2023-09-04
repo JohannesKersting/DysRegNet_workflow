@@ -129,7 +129,7 @@ def main():
                       margin_titles=True)
     g.set_xticklabels(rotation=45)
     g.map_dataframe(sns.violinplot, x="Cancer", y="value", hue="Cancer", hue_order=cancer_types, order=cancer_types,
-                    palette=palette_dict, dodge=False)
+                    palette=palette_dict, dodge=False, cut=0)
 
     g.set_titles(col_template="{col_name}", row_template="")
     g.set_xlabels("")
@@ -183,7 +183,7 @@ def main():
 
         g = sns.FacetGrid(coef_stats_df[coef_stats_df["confounder"]!="intercept"], row="type", height=3, aspect=5, sharey="row")
         g.map_dataframe(sns.violinplot, x="confounder", y="value", hue="Cancer", hue_order=cancer_types,
-                        palette=palette_dict)
+                        palette=palette_dict, cut=0)
 
         g.set_titles(col_template="", row_template="")
         g.set_xlabels("")
