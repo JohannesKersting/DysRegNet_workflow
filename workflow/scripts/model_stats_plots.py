@@ -181,7 +181,7 @@ def main():
         palette = sns.color_palette(cc.glasbey_light, n_colors=len(cancer_types) + 1)[1:]
         palette_dict = dict(zip(cancer_types, palette))
 
-        g = sns.FacetGrid(coef_stats_df, row="type", height=3, aspect=5, sharey="row")
+        g = sns.FacetGrid(coef_stats_df[coef_stats_df["confounder"]!="intercept"], row="type", height=3, aspect=5, sharey="row")
         g.map_dataframe(sns.violinplot, x="confounder", y="value", hue="Cancer", hue_order=cancer_types,
                         palette=palette_dict)
 
