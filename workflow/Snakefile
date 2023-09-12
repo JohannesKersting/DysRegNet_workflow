@@ -621,6 +621,20 @@ rule model_stats_plots:
         "--output_stats_summary {output.stats_summary} "
         "&> {log}"
 
+rule cancer_stage_tests:
+    input:
+        network = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
+        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
+    output:
+        pvals = f"{RESULT_DIR}/cancer_stage_analysis/{{cancer_type}}/{{method}}/stage_tests-{{norm_method}}-{{ref_net}}.csv"
+    log:
+        f"logs/cancer_stage_tests/{{cancer_type}}/{{method}}/stage_tests-{{norm_method}}-{{ref_net}}.log"
+    shell:
+        "python workflow/scripts/cancer_stage_tests.py "
+        "--network {input.network} "
+        "--meta {input.meta} "
+        "--output_pvals {output.pvals} "
+        "&> {log}"
 
 #### runtime benchmark ####
 
@@ -796,6 +810,10 @@ rule all:
 
         # model stats
         expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
+
+        # cancer stage tests
+        expand(rules.cancer_stage_tests.output, cancer_type="THCA", method=["dysregnet", "ssn"], norm_method="tpm", ref_net="genie3_shared_tpm.top_100k"),
+
 
         # run time benchmark
         rules.runtime_plots.output,
