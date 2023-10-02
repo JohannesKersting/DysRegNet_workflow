@@ -318,7 +318,7 @@ rule lioness:
 
 
 
-#### benchmark ####
+#### benchmark and omics analysis ####
 
 rule compute_overlap:
     input:
@@ -451,7 +451,6 @@ rule clustering_benchmark_shared:
         "--output {output} "
         "&> {log}"
 
-#### omics analysis ####
 
 rule methylation_tests:
     input:
@@ -623,12 +622,15 @@ rule model_stats_plots:
 
 rule cancer_stage_tests:
     input:
-        network = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
-        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
+        network = lambda wildcards:
+            expand("{result_dir}/patient_networks/{{cancer_type}}/{{method}}/{{norm_method}}-{ref_net}.fea",
+            result_dir=RESULT_DIR, ref_net=get_ref_net_names(wildcards.ref_net_type, wildcards.norm_method, cancer_types=[wildcards.cancer_type])),
+        meta = lambda wildcards:
+            f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
     output:
-        pvals = f"{RESULT_DIR}/cancer_stage_analysis/{{cancer_type}}/{{method}}/stage_tests-{{norm_method}}-{{ref_net}}.csv"
+        pvals = touch(f"{RESULT_DIR}/cancer_stage_analysis/{{cancer_type}}/{{method}}/stage_tests-{{norm_method}}-{{ref_net_type}}.csv")
     log:
-        f"logs/cancer_stage_tests/{{cancer_type}}/{{method}}/stage_tests-{{norm_method}}-{{ref_net}}.log"
+        f"logs/cancer_stage_tests/{{cancer_type}}/{{method}}/stage_tests-{{norm_method}}-{{ref_net_type}}.log"
     shell:
         "python workflow/scripts/cancer_stage_tests.py "
         "--network {input.network} "
@@ -812,7 +814,8 @@ rule all:
         expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
 
         # cancer stage tests
-        expand(rules.cancer_stage_tests.output, cancer_type="THCA", method=["dysregnet", "ssn"], norm_method="tpm", ref_net="genie3_shared_tpm.top_100k"),
+        [expand(rules.cancer_stage_tests.output, cancer_type=CANCER_TYPES, method=["dysregnet", "ssn"], norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method))
+         for norm_method in NORM_METHODS],
 
 
         # run time benchmark

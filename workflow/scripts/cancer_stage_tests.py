@@ -1,28 +1,13 @@
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
+
 import argparse
 import sys
 
-import statsmodels.stats.multitest as mt
 import statsmodels.api as sm
 
-import scipy as sp
-from scipy.sparse import csr_matrix
-from scipy import stats
-from scipy.stats import mannwhitneyu, fisher_exact
 
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import SelectFromModel
-from sklearn.linear_model import ElasticNet,Ridge, Lasso
-from sklearn.datasets import make_classification
-from sklearn.inspection import permutation_importance
-from sklearn.linear_model import LinearRegression
-
-import networkx as nx
+from scipy.stats import mannwhitneyu
 
 from ast import literal_eval as make_tuple
 
@@ -33,9 +18,8 @@ def parse_stage(x):
     if x in ['Stage I']:
         return 'early'
 
-    elif x in ['Stage IIIA', "Stage IIIB", 'Stage IIIC', 'Stage IV', 'Stage IVA', 'Stage IVC', 'Stage III']:
+    elif x in ['Stage IIIA', "Stage IIIB", 'Stage IIIC', 'Stage IV', 'Stage IVA', 'Stage IVB', 'Stage IVC', 'Stage III']:
         return 'late'
-
 
     else:
         return 'others'
@@ -99,6 +83,7 @@ def main():
     network_path = args.network
     meta_path = args.meta
     pvals_out = args.output_pvals
+    min_patients = 30
 
     # read and format data
     net = pd.read_feather(network_path)
@@ -132,8 +117,9 @@ def main():
     print(f"{late_stage_dys.shape=}")
 
     # check sufficient sample number for stages
-    assert (early_stage_dys.shape[0] >= 50)
-    assert (late_stage_dys.shape[0] >= 50)
+    if early_stage_dys.shape[0] < min_patients or late_stage_dys.shape[0] < min_patients:
+        print(f"Insufficient sample number (min required: {min_patients})")
+        sys.exit(0)
 
     results_less = get_pvals(early_stage_dys=early_stage_dys, late_stage_dys=late_stage_dys, alternative="less",
                              tfs=dys_scores.columns)
