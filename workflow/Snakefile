@@ -638,6 +638,27 @@ rule cancer_stage_tests:
         "--output_pvals {output.pvals} "
         "&> {log}"
 
+rule cancer_stage_plots:
+    input:
+        lambda wildcards:
+            expand(rules.cancer_stage_tests.output,
+                method = wildcards.method,
+                norm_method = wildcards.norm_method,
+                cancer_type=CANCER_TYPES,
+                ref_net_type=get_ref_net_types(wildcards.norm_method),
+            )
+    output:
+        f"{RESULT_DIR}/figures/cancer_stage_analysis/cancer_stage-{{method}}-{{norm_method}}.png"
+    log:
+        f"logs/cancer_stage_plots/{{method}}-{{norm_method}}.log"
+    shell:
+        "python workflow/scripts/cancer_stage_plots.py "
+        "--inputs {input} "
+        "--output {output} "
+        "&> {log}"
+
+
+
 #### runtime benchmark ####
 
 rule runtime_dysregnet:
@@ -755,8 +776,6 @@ rule load_db:
         "&& touch {output.db_flag}) "
         "&> {log}"
 
-networks = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}.fea",
-stats = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}-stats.csv",
 
 rule all:
     input:
@@ -813,10 +832,8 @@ rule all:
         # model stats
         expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
 
-        # cancer stage tests
-        [expand(rules.cancer_stage_tests.output, cancer_type=CANCER_TYPES, method=["dysregnet", "ssn"], norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method))
-         for norm_method in NORM_METHODS],
-
+        # cancer stage plots
+        expand(rules.cancer_stage_plots.output, method=["dysregnet", "ssn"], norm_method=NORM_METHODS),
 
         # run time benchmark
         rules.runtime_plots.output,
