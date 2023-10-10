@@ -95,7 +95,7 @@ def main():
                      order=cancer_types)
     ax.set(xlim=(0, 70))
 
-    ax.legend(title="Reference network", bbox_to_anchor=(1.03, 0.5), loc="center left", borderaxespad=0)
+    ax.legend(title="Reference network", bbox_to_anchor=(1.05, 0.5), loc="center left", borderaxespad=0)
     plt.tight_layout()
     plt.ylabel("Cancer")
 
