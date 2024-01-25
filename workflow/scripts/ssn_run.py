@@ -7,7 +7,6 @@ tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 import pandas as pd
 import numpy as np
-import dysregnet
 import argparse
 import pyarrow
 import sys
@@ -30,7 +29,7 @@ parser.add_argument('--grn', type=str, required=True,
 parser.add_argument('--output', type=str, required=True,
                     help='The output file path and name.'
                     )
-parser.add_argument("--pvalue", help="Define a p-value threshold for edges", default=0.005,
+parser.add_argument("--pvalue", help="Define a p-value threshold for edges", default=0.01,
                     required=False)
 
 args = parser.parse_args()
@@ -46,61 +45,89 @@ print("\n")
 conCol = "condition"
 
 
+def run_ssn(expression_data, meta, GRN, conCol, pvalue=0.01, debug=False):
+    # filter genes that aren't included in both, network and expression data
+    GRN_genes = set(GRN.iloc[:, 0].values.tolist() + GRN.iloc[:, 1].values.tolist())
+    filtered_genes = [g for g in expression_data.index if g in GRN_genes]
 
-def run_ssn(expression_data, meta, GRN, conCol, pvalue=0.005):
-
-
-    # Filter are genes that aren't included in both, network and expression data
-    GRN_genes = list(set(GRN.iloc[:, 0].values.tolist() + GRN.iloc[:, 1].values.tolist()))
-    GRN_genes = [g for g in GRN_genes if g in expression_data.index]
-
-    if not GRN_genes:
+    if not filtered_genes:
         raise ValueError('Gene id or name in GRN DataFrame do not match the ones in expression_data DataFrame')
 
-    expression_data = expression_data.loc[GRN_genes]
-    GRN = GRN[GRN.iloc[:, 0].isin(GRN_genes)]
-    GRN = GRN[GRN.iloc[:, 1].isin(GRN_genes)].drop_duplicates()
+    expression_data = expression_data.loc[filtered_genes]
+    GRN = GRN[GRN.iloc[:, 0].isin(filtered_genes)]
+    GRN = GRN[GRN.iloc[:, 1].isin(filtered_genes)].drop_duplicates()
 
-    case = expression_data[meta[meta[conCol]==1].index]
-    control = expression_data[meta[meta[conCol]==0].index]
+    # separate expression data into case and control
+    case = expression_data[meta[meta[conCol] == 1].index]
+    control = expression_data[meta[meta[conCol] == 0].index]
     normal_net = GRN
 
-    genes = list(case.index)
-    genes_dict = {genes[i]: i for i in range(len(genes))}
+    # dictionary for numpy array indexing
+    genes_dict = {filtered_genes[i]: i for i in range(len(filtered_genes))}
     patients = list(case.columns)
     n = len(control.columns)
-    genes = set(genes)
 
-    print(f"Number of unique genes in expr AND grn: {len(genes)}")
+    print(f"Number of unique genes in expr AND grn: {len(filtered_genes)}")
 
+    # correlation matrix for control samples
     cor = np.corrcoef(control)
+
+    # numpy array for the SSN networsk
     crc = np.zeros((len(patients), normal_net.shape[0]))
+
+    if debug:
+        print(control)
+        print(case)
+        print(cor)
+        print(f"{n=}")
+
     pat_count = 0
     for pat in tqdm(patients):
+
+        # calculate correlation matrix with additional patient pat
         data_p = control.copy()
         data_p[pat] = case[pat]
         corr_p = np.corrcoef(data_p)
+
+        # get the correlation differences
         dcor = corr_p - cor
+
+        # transform into z-scores
         zscore = dcor / ((1 - cor ** 2) / (n - 1))
-        pv = stats.norm.sf(zscore)
+
+        # two-sided Z-test to obtain p-values
+        pv = 2 * stats.norm.sf(abs(zscore))
+
+        if debug:
+            print("\n" + pat)
+            print("corr_p")
+            print(corr_p)
+            print("dcor")
+            print(dcor)
+            print("p-values")
+            print(pv)
+
+        # set significant p-values to True, others to False
         pv = pv < pvalue / len(patients)
+
+        # filter for edges contained in the reference network
         edge_count = 0
         edges = []
         for tup in normal_net.itertuples():
-            if tup[1] in genes and tup[2] in genes:
 
-                edge = (genes_dict[tup[1]], genes_dict[tup[2]])
-                if pv[edge]:
-                    crc[pat_count, edge_count] = 1
+            edge = (genes_dict[tup[1]], genes_dict[tup[2]])
+            if pv[edge]:
+                crc[pat_count, edge_count] = 1
 
             edge_count += 1
             edges.append((tup[1], tup[2]))
 
         pat_count += 1
 
+    # create final result DataFrame
     edges = [str(x) for x in edges]
     crc = pd.DataFrame(crc, columns=edges)
-    crc['patient id'] = patients
+    crc.insert(0, 'patient id', patients)
 
     return crc
 
@@ -108,8 +135,8 @@ def run_ssn(expression_data, meta, GRN, conCol, pvalue=0.005):
 
 
 # Read data
-meta = pd.read_csv(args.meta, index_col = 0)
-expr = pd.read_csv(args.expr, index_col = 0)
+meta = pd.read_csv(args.meta, index_col=0)
+expr = pd.read_csv(args.expr, index_col=0)
 grn = pd.read_csv(args.grn)
 
 # Pre-process data
@@ -137,7 +164,7 @@ print(meta.groupby(conCol).size())
 print("\n")
 
 
-result = run_ssn(expression_data=expr, meta=meta, GRN=grn, conCol=conCol, pvalue=args.pvalue)
+result = run_ssn(expression_data=expr, meta=meta, GRN=grn, conCol=conCol, pvalue=args.pvalue, debug=False)
 
 # feather needs str column names
 result.columns = [str(x) for x in result.columns]
