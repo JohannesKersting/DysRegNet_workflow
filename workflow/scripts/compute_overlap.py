@@ -133,7 +133,6 @@ def get_overlap(x, y):
 
 def overlap_chunk(chunk_tuple):
     set_list_1, set_list_2 = chunk_tuple
-    print(len(set_list_1), len(set_list_2))
     overlap_mat = np.zeros((len(set_list_1), len(set_list_2)))
     for i in range(len(set_list_1)):
         for j in range(len(set_list_2)):
@@ -142,6 +141,7 @@ def overlap_chunk(chunk_tuple):
 
 
 def overlap_mat_threads(patient_list, networks, threads=10):
+    chunks = np.array_split(networks, threads)
     with Pool(threads) as p:
         chunk_overlap_list = p.map(overlap_chunk, ((chunk, networks) for chunk in chunks))
 
