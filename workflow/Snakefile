@@ -320,6 +320,7 @@ rule lioness:
 
 #### benchmark and omics analysis ####
 
+# no longer used
 rule compute_overlap:
     input:
         expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
@@ -792,16 +793,6 @@ rule all:
             ref_net =["exp","string"]
         ),
 
-        # clustering heatmaps
-        expand(
-            "{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-{ref_net}.png",
-            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
-        ),
-        expand(
-            "{result_dir}/figures/clustering/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
-            result_dir=RESULT_DIR, method=["dysregnet", "ssn"], norm_method=NORM_METHODS
-        ),
-
         # clustering heatmaps shared
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-{ref_net}.png",
             result_dir=RESULT_DIR, method=["dysregnet_signed", "dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
@@ -809,9 +800,6 @@ rule all:
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
             result_dir=RESULT_DIR, method=["dysregnet_signed", "dysregnet", "ssn"], norm_method=NORM_METHODS
         ),
-
-        # clustering benchmark
-        expand(rules.clustering_benchmark.output, norm_method=NORM_METHODS),
 
         # clustering benchmark shared
         expand(rules.clustering_benchmark_shared.output, norm_method=NORM_METHODS),
