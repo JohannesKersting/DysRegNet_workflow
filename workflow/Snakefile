@@ -23,9 +23,9 @@ KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
 
 CANCER_TYPES = ["COAD", "LUSC", "STAD", "LUAD", "THCA", "HNSC", "LIHC", "PRAD", "KIRC", "BRCA", "KIRP"]
 NORM_METHODS = ["tpm", "mrn"]
-METHODS = ["dysregnet", "ssn"]
+METHODS = ["dysregnet", "dysregnet_no_overlap", "ssn"]
 REF_NET_TYPES = ['exp', 'string', 'genie3_shared', 'genie3_individual']
-OL_METHODS = METHODS+["dysregnet_signed"] # method names, dysregnet also has "_signed" extension
+OL_METHODS = METHODS+["dysregnet_signed","dysregnet_no_overlap_signed"] # method names, dysregnet also has "_signed" extension
 
 # map different normalization methods to their sample sheets
 META_MAP = {"tpm":"tpm", "mrn":"expected_counts"}
@@ -278,6 +278,27 @@ rule dysregnet:
         "--output_stats {output.stats} " 
         "&> {log}"
 
+rule dysregnet_no_direction:
+    input:
+        expr = f"{RESULT_DIR}/expression_processed/{{cancer_type}}/{{norm_method}}.csv",
+        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
+        grn =  get_ref_net_path
+    output:
+        networks = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet_no_direction/{{norm_method}}-{{ref_net}}.fea",
+        stats = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet_no_direction/{{norm_method}}-{{ref_net}}-stats.csv",
+
+    log:
+        "logs/dysregnet_no_direction/{cancer_type}/{norm_method}-{ref_net}.log"
+    shell:
+        "python workflow/scripts/dysregnet_run.py "
+        "--expr {input.expr} "
+        "--meta {input.meta} "
+        "--grn {input.grn} "
+        "--no_direction "
+        "--output {output.networks} "
+        "--output_stats {output.stats} " 
+        "&> {log}"
+
 
 rule ssn:
     input:
@@ -319,25 +340,6 @@ rule lioness:
 
 
 #### benchmark and omics analysis ####
-
-# no longer used
-rule compute_overlap:
-    input:
-        expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
-            result_dir=RESULT_DIR,cancer_type=CANCER_TYPES),
-    output:
-        edges = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
-        nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
-    log:
-        "logs/compute_overlap/{method}/overlap-{norm_method}-{ref_net}.log"
-    threads: 20
-    shell:
-        "python workflow/scripts/compute_overlap.py "
-        "--input {input} "
-        "--threads {threads} "
-        "--output_edges {output.edges} "
-        "--output_nodes {output.nodes} "
-        "&> {log}"
 
 rule compute_overlap_shared:
     input:
@@ -381,25 +383,6 @@ rule compute_overlap_shared_signed:
         "&> {log}"
 
 
-rule clustering:
-    input:
-        overlaps_edges = f"{RESULT_DIR}/benchmark/compute_overlap/{{ol_method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
-        overlaps_nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{ol_method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea",
-        meta = f"{DATA_DIR}/{META_FILE}",
-    output:
-        edges = f"{RESULT_DIR}/figures/clustering/{{ol_method}}/{{ol_method}}-edges-{{norm_method}}-{{ref_net}}.png",
-        nodes = f"{RESULT_DIR}/figures/clustering/{{ol_method}}/{{ol_method}}-nodes-{{norm_method}}-{{ref_net}}.png",
-    log:
-        "logs/clustering/{ol_method}/{norm_method}-{ref_net}.log"
-    shell:
-        "python workflow/scripts/clustering.py "
-        "--overlaps_edges {input.overlaps_edges} "
-        "--overlaps_nodes {input.overlaps_nodes} "
-        "--meta {input.meta} "
-        "--output_edges {output.edges} "
-        "--output_nodes {output.nodes} "
-        "&> {log}"
-
 rule clustering_shared:
     input:
         overlaps_edges=f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{ol_method}}/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
@@ -422,29 +405,11 @@ rule clustering_shared:
         "&> {log}"
 
 
-rule clustering_benchmark:
-    input:
-        input = lambda wildcards:
-            expand("{result_dir}/benchmark/compute_overlap/{method}/overlap_edges-{{norm_method}}-{ref_net}.fea",
-                result_dir=RESULT_DIR, method=METHODS, ref_net=get_shared_ref_net_names(wildcards.norm_method)
-            ),
-        meta = f"{DATA_DIR}/{META_FILE}",
-    output:
-        f"{RESULT_DIR}/figures/clustering_benchmark/f1-{{norm_method}}.png"
-    log:
-        "logs/clustering_benchmark/f1-{norm_method}.log"
-    shell:
-        "python workflow/scripts/clustering_benchmark.py "
-        "--input {input.input} "
-        "--meta {input.meta} "
-        "--output {output} "
-        "&> {log}"
-
 rule clustering_benchmark_shared:
     input:
         input = lambda wildcards:
             expand("{result_dir}/benchmark/compute_overlap_shared/{method}/overlap_edges-{{norm_method}}-{ref_net}.fea",
-                result_dir=RESULT_DIR, method=["dysregnet_signed","ssn"], ref_net=get_shared_ref_net_names(wildcards.norm_method)
+                result_dir=RESULT_DIR, method=OL_METHODS, ref_net=get_shared_ref_net_names(wildcards.norm_method)
             ),
         meta = f"{DATA_DIR}/{META_FILE}",
     output:
@@ -787,10 +752,10 @@ rule load_db:
 rule all:
     input:
         # patient-specific network outputs
-        get_genie3_patient_network_outputs(method="dysregnet",norm_method="tpm"),
-        get_genie3_patient_network_outputs(method="ssn", norm_method="tpm"),
-        get_genie3_patient_network_outputs(method="dysregnet", norm_method="mrn"),
-        get_genie3_patient_network_outputs(method="ssn", norm_method="mrn"),
+        #get_genie3_patient_network_outputs(method="dysregnet",norm_method="tpm"),
+        #get_genie3_patient_network_outputs(method="ssn", norm_method="tpm"),
+        #get_genie3_patient_network_outputs(method="dysregnet", norm_method="mrn"),
+        #get_genie3_patient_network_outputs(method="ssn", norm_method="mrn"),
         expand("{result_dir}/patient_networks/{cancer_type}/{method}/{norm_method}-{ref_net}.fea",
             result_dir=RESULT_DIR,
             cancer_type = CANCER_TYPES,
@@ -801,33 +766,33 @@ rule all:
 
         # clustering heatmaps shared
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-{ref_net}.png",
-            result_dir=RESULT_DIR, method=["dysregnet_signed", "dysregnet", "ssn"], norm_method=NORM_METHODS, ref_net=["exp", "string"]
+            result_dir=RESULT_DIR, method=OL_METHODS, norm_method=NORM_METHODS, ref_net=["exp", "string"]
         ),
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
-            result_dir=RESULT_DIR, method=["dysregnet_signed", "dysregnet", "ssn"], norm_method=NORM_METHODS
+            result_dir=RESULT_DIR, method=OL_METHODS, norm_method=NORM_METHODS
         ),
 
         # clustering benchmark shared
         expand(rules.clustering_benchmark_shared.output, norm_method=NORM_METHODS),
 
         # methylation plots
-        expand(rules.methylation_plots.output, method=["dysregnet","ssn"], norm_method=NORM_METHODS),
+        expand(rules.methylation_plots.output, method=METHODS, norm_method=NORM_METHODS),
 
         # methylation zscores plots
-        expand(rules.methylation_zscores_plots.output, method=["dysregnet", "ssn"], norm_method=NORM_METHODS),
+        expand(rules.methylation_zscores_plots.output, method=METHODS, norm_method=NORM_METHODS),
 
         # mutation tests
-        [expand(rules.mutation_tests.output, method=["dysregnet","ssn"], norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method),  n_mut_patients=[2,4,6])
+        [expand(rules.mutation_tests.output, method=METHODS, norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method),  n_mut_patients=[2,4,6])
          for norm_method in NORM_METHODS],
 
         # mutation plots
-        expand(rules.mutation_plots.output, method=["dysregnet", "ssn"], norm_method=NORM_METHODS, n_mut_patients=[2,4,6]),
+        expand(rules.mutation_plots.output, method=METHODS, norm_method=NORM_METHODS, n_mut_patients=[2,4,6]),
 
         # model stats
         expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
 
         # cancer stage plots
-        expand(rules.cancer_stage_plots.output, method=["dysregnet", "ssn"], norm_method=NORM_METHODS),
+        expand(rules.cancer_stage_plots.output, method=METHODS, norm_method=NORM_METHODS),
 
         # run time benchmark
         rules.runtime_plots.output,

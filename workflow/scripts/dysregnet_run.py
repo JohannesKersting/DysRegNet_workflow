@@ -25,6 +25,8 @@ parser.add_argument('--meta', type=str, required=True,
 parser.add_argument('--grn', type=str, required=True,
                     help='Path to a reference network in CSV format. The first two columns will be selected and TF and TG cols.'
                     )
+parser.add_argument("--no_direction", action="store_true",
+                    help="Run DysRegNet without directionality criterion")
 parser.add_argument('--output', type=str, required=True,
                     help='The output file path (feather).'
                     )
@@ -45,6 +47,7 @@ conCov = ["birth_days_to"]
 catCovCandidates = ["gender", "race"]
 conCol = "condition"
 idCol = "sample"
+direction_condition = not args.no_direction
 
 
 # Read data
@@ -107,7 +110,8 @@ data=dysregnet.run(expression_data=expr,
                    CatCov=catCov,
                    ConCov=conCov,
                    GRN=grn,
-                   conCol=conCol)
+                   conCol=conCol,
+                   direction_condition=direction_condition)
 
 result = data.get_results()
 stats = data.get_model_stats()
@@ -130,8 +134,8 @@ not_zero = np.sum(np.sum(result!=0))
 
 print(f"Number of total dysregulations: {not_zero}")
 print(f"Number of edges with at least one dysregulation: {np.sum(col_sums!=0)}")
-print(f"Number of positive slopes: {np.sum(col_sums>0)}")
-print(f"Number of negative slopes: {np.sum(col_sums<0)}")
+print(f"Number of positive slopes: {np.sum(stats['coef_TF']>0)}")
+print(f"Number of negative slopes: {np.sum(stats['coef_TF']<0)}")
 
 
 # Write output
