@@ -23,9 +23,9 @@ KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
 
 CANCER_TYPES = ["COAD", "LUSC", "STAD", "LUAD", "THCA", "HNSC", "LIHC", "PRAD", "KIRC", "BRCA", "KIRP"]
 NORM_METHODS = ["tpm", "mrn"]
-METHODS = ["dysregnet", "dysregnet_no_overlap", "ssn"]
+METHODS = ["dysregnet", "dysregnet_no_direction", "ssn"]
 REF_NET_TYPES = ['exp', 'string', 'genie3_shared', 'genie3_individual']
-OL_METHODS = METHODS+["dysregnet_signed","dysregnet_no_overlap_signed"] # method names, dysregnet also has "_signed" extension
+OL_METHODS = METHODS+["dysregnet_signed","dysregnet_no_direction_signed"] # method names, dysregnet also has "_signed" extension
 
 # map different normalization methods to their sample sheets
 META_MAP = {"tpm":"tpm", "mrn":"expected_counts"}
