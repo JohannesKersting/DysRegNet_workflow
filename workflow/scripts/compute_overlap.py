@@ -11,6 +11,8 @@ tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 import pyarrow
 import sys
 import argparse
+import multiprocessing as mp
+from multiprocessing import Pool
 
 
 def get_sets(input_list, index_col, only_shared_edges, sign):
@@ -105,7 +107,7 @@ def get_sets(input_list, index_col, only_shared_edges, sign):
         # filter edges
         filtered_edges = []
         for patient_edges in edges:
-            filtered_patient_edges = [edge for edge in patient_edges if edge in shared_edges]
+            filtered_patient_edges = {edge for edge in patient_edges if edge in shared_edges}
             filtered_edges.append(filtered_patient_edges)
         edges = filtered_edges
 
@@ -124,30 +126,31 @@ def get_sets(input_list, index_col, only_shared_edges, sign):
     return patient_list, edges, nodes
 
 def get_overlap(x, y):
+    if not x or not y:
+        return 0
     return (len(x.intersection(y)) / min(len(x), len(y)))
 
 
-def overlap_mat(patient_list, networks):
-    overlap_mat = np.zeros((len(patient_list), len(patient_list)))
+def overlap_chunk(chunk_tuple):
+    set_list_1, set_list_2 = chunk_tuple
+    print(len(set_list_1), len(set_list_2))
+    overlap_mat = np.zeros((len(set_list_1), len(set_list_2)))
+    for i in range(len(set_list_1)):
+        for j in range(len(set_list_2)):
+            overlap_mat[i, j] = get_overlap(set_list_1[i], set_list_2[j])
+    return overlap_mat
 
-    idx = [(i, j) for i in range(len(patient_list)) for j in range(i, len(patient_list))]
-    for idx in tqdm(idx):
-        i, j = idx
-        set_1 = networks[i]
-        set_2 = networks[j]
-        try:
-            overlap = get_overlap(set(set_1), set(set_2))
-        except ZeroDivisionError:
-            overlap = 0
 
-        overlap_mat[i, j] = overlap
-        overlap_mat[j, i] = overlap_mat[i, j]
+def overlap_mat_threads(patient_list, networks, threads=10):
+    with Pool(threads) as p:
+        chunk_overlap_list = p.map(overlap_chunk, ((chunk, networks) for chunk in chunks))
 
+    overlap_mat = np.concatenate(chunk_overlap_list)
     return pd.DataFrame(overlap_mat, index=patient_list, columns=patient_list)
 
-def combined_overlaps(patient_list, index_col, pos, neg):
-    overlap_pos = overlap_mat(patient_list, pos)
-    overlap_neg = overlap_mat(patient_list, neg)
+def combined_overlaps(patient_list, index_col, pos, neg, threads):
+    overlap_pos = overlap_mat_threads(patient_list, pos, threads)
+    overlap_neg = overlap_mat_threads(patient_list, neg, threads)
     overlap = (overlap_pos + overlap_neg) / 2
     overlap = overlap.reset_index(names=index_col)
     return overlap
@@ -162,6 +165,7 @@ def main():
                         help="Consider only edges which appear in all input networks")
     parser.add_argument("--signed", action="store_true",
                         help="The overlap calculation should distinguish between positive and negative values in the input network")
+    parser.add_argument("--threads", type=int, default=10)
     parser.add_argument('--output_edges', type=str, required=True,
                         help='Path to the edge output file (will be stored in feather format)')
     parser.add_argument('--output_nodes', type=str, required=True,
@@ -180,6 +184,7 @@ def main():
     output_nodes = args.output_nodes
     only_shared_edges = args.shared
     signed = args.signed
+    threads = args.threads
 
     index_col = "patient id"
 
@@ -187,14 +192,14 @@ def main():
 
         patient_list, edges, nodes = get_sets(input_list, index_col=index_col, only_shared_edges=only_shared_edges, sign=0)
 
-        overlap_edges = overlap_mat(patient_list, edges).reset_index(names=index_col)
+        overlap_edges = overlap_mat_threads(patient_list, edges, threads).reset_index(names=index_col)
         print("Edge overlaps:")
         print(overlap_edges)
         overlap_edges.to_feather(output_edges)
         overlap_edges = None
         edges = None
 
-        overlap_nodes = overlap_mat(patient_list, nodes).reset_index(names=index_col)
+        overlap_nodes = overlap_mat_threads(patient_list, nodes, threads).reset_index(names=index_col)
         print("Node overlaps:")
         print(overlap_nodes)
         overlap_nodes.to_feather(output_nodes)
@@ -211,7 +216,7 @@ def main():
 
         assert patient_list_pos == patient_list_neg
 
-        overlap_edges = combined_overlaps(patient_list_pos, index_col, edges_pos, edges_neg)
+        overlap_edges = combined_overlaps(patient_list_pos, index_col, edges_pos, edges_neg, threads)
         edges_pos = 0
         edges_neg = 0
 
@@ -221,7 +226,7 @@ def main():
         overlap_edges = None
 
 
-        overlap_nodes = combined_overlaps(patient_list_pos, index_col, nodes_pos, nodes_neg)
+        overlap_nodes = combined_overlaps(patient_list_pos, index_col, nodes_pos, nodes_neg, threads)
         nodes_pos = None
         nodes_neg = None
 

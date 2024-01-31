@@ -330,9 +330,11 @@ rule compute_overlap:
         nodes = f"{RESULT_DIR}/benchmark/compute_overlap/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/compute_overlap/{method}/overlap-{norm_method}-{ref_net}.log"
+    threads: 20
     shell:
         "python workflow/scripts/compute_overlap.py "
         "--input {input} "
+        "--threads {threads} "
         "--output_edges {output.edges} "
         "--output_nodes {output.nodes} "
         "&> {log}"
@@ -346,9 +348,11 @@ rule compute_overlap_shared:
         nodes = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/compute_overlap_shared/{method}/overlap-{norm_method}-{ref_net}.log"
+    threads: 20
     shell:
         "python workflow/scripts/compute_overlap.py "
         "--input {input} "
+        "--threads {threads} "
         "--shared "
         "--output_edges {output.edges} "
         "--output_nodes {output.nodes} "
@@ -363,11 +367,13 @@ rule compute_overlap_shared_signed:
         nodes = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}_signed/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/compute_overlap_shared/{method}_signed/overlap-{norm_method}-{ref_net}.log"
+    threads: 20
     benchmark:
         "logs/compute_overlap_shared/{method}_signed/overlap-{norm_method}-{ref_net}.benchmark.txt"
     shell:
         "python workflow/scripts/compute_overlap.py "
         "--input {input} "
+        "--threads {threads} "
         "--shared "
         "--signed "
         "--output_edges {output.edges} "
