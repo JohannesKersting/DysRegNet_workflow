@@ -5,6 +5,8 @@ import argparse
 import os
 import sys
 
+from commons import method_lut, network_lut
+
 
 def get_input_info(path):
     '''
@@ -53,19 +55,10 @@ def main():
     output_path = args.output
 
     # get input info
-    method_lut = {"dysregnet": "DysRegNet",
-                  "ssn": "SSN",
-                  }
-    network_lut = {"exp": "experimental",
-                   "string": "string",
-                   "genie3_shared": "genie3 shared",
-                   "genie3_individual": "genie3 individual",
-                   }
-
     input_infos = [get_input_info(path) for path in input_paths]
     input_df = pd.DataFrame(input_infos, columns=["path", "cancer", "method", "norm_method", "network"])
-    input_df["method"] = input_df["method"].map(method_lut)
-    input_df["network"] = input_df["network"].map(network_lut)
+    input_df["method"] = input_df["method"].map(lambda x: method_lut[x] if x in method_lut.keys() else x)
+    input_df["network"] = input_df["network"].map(lambda x: network_lut[x] if x in network_lut.keys() else x)
 
     print(f"input_df: \n{input_df.to_string()}\n")
 
@@ -89,15 +82,18 @@ def main():
 
     # plot
     sns.set(style="whitegrid")
-    cancer_types = sorted(list(set(summary_df["cancer"])))
 
-    ax = sns.barplot(x="% of significant associations", hue="network", y="cancer", data=summary_df, palette="Set2",
-                     order=cancer_types)
-    ax.set(xlim=(0, 70))
+    y = "cancer"
+    col = "network"
+    hue = "method"
 
-    ax.legend(title="Reference network", bbox_to_anchor=(1.05, 0.5), loc="center left", borderaxespad=0)
-    plt.tight_layout()
-    plt.ylabel("Cancer")
+    g = sns.catplot(
+        summary_df, kind="bar",
+        x="% of significant associations", y=y, col=col, hue=hue, palette="Set1",
+        height=6, aspect=0.5, legend=None
+    )
+    g.set_titles(col_template="{col_name}", row_template="{row_name}")
+    g.add_legend(title="Method")
 
     plt.savefig(output_path, dpi=300)
     plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)

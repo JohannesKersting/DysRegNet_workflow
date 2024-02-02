@@ -21,7 +21,7 @@ RAW_EXPR_TPM_FILE = "expression_raw/tcga_RSEM_gene_tpm"
 
 KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
 
-CANCER_TYPES = ["COAD", "LUSC", "STAD", "LUAD", "THCA", "HNSC", "LIHC", "PRAD", "KIRC", "BRCA", "KIRP"]
+CANCER_TYPES = ["BRCA", "COAD", "HNSC", "KIRC", "KIRP", "LIHC", "LUAD", "LUSC", "PRAD", "STAD", "THCA", ]
 NORM_METHODS = ["tpm", "mrn"]
 METHODS = ["dysregnet", "dysregnet_no_direction", "ssn"]
 REF_NET_TYPES = ['exp', 'string', 'genie3_shared', 'genie3_individual']
@@ -614,15 +614,15 @@ rule cancer_stage_plots:
     input:
         lambda wildcards:
             expand(rules.cancer_stage_tests.output,
-                method = wildcards.method,
+                method = METHODS,
                 norm_method = wildcards.norm_method,
                 cancer_type=CANCER_TYPES,
                 ref_net_type=get_ref_net_types(wildcards.norm_method),
             )
     output:
-        f"{RESULT_DIR}/figures/cancer_stage_analysis/cancer_stage-{{method}}-{{norm_method}}.png"
+        f"{RESULT_DIR}/figures/cancer_stage_analysis/cancer_stage-{{norm_method}}.png"
     log:
-        f"logs/cancer_stage_plots/{{method}}-{{norm_method}}.log"
+        f"logs/cancer_stage_plots/{{norm_method}}.log"
     shell:
         "python workflow/scripts/cancer_stage_plots.py "
         "--inputs {input} "
@@ -792,7 +792,7 @@ rule all:
         expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
 
         # cancer stage plots
-        expand(rules.cancer_stage_plots.output, method=METHODS, norm_method=NORM_METHODS),
+        expand(rules.cancer_stage_plots.output, norm_method="tpm"),
 
         # run time benchmark
         rules.runtime_plots.output,
