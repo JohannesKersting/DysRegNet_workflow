@@ -11,6 +11,8 @@ import argparse
 import os
 import sys
 
+from commons import method_lut, network_lut
+
 
 def get_input_info(path):
     '''
@@ -112,20 +114,12 @@ def main():
 
 
     # get infos from input paths
-    method_lut = {"dysregnet": "DysRegNet",
-                  "ssn": "SSN",
-                  "dysregnet_signed": "DysRegNet",
-                  }
-    network_lut = {"exp": "experimental",
-                   "string": "string",
-                   "genie3": "genie3 shared",
-                   }
 
     input_infos = [get_input_info(path) for path in input_paths]
 
     input_df = pd.DataFrame(input_infos, columns=["path", "method", "overlap_type", "norm_method", "network"])
-    input_df["method"] = input_df["method"].map(method_lut)
-    input_df["network"] = input_df["network"].map(network_lut)
+    input_df["method"] = input_df["method"].map(lambda x: method_lut[x] if x in method_lut.keys() else x)
+    input_df["network"] = input_df["network"].map(lambda x: network_lut[x] if x in network_lut.keys() else x)
     print(f"input_df: \n{input_df.to_string()}\n")
 
 
@@ -135,12 +129,12 @@ def main():
 
 
     # plotting
-    plt.figure(figsize=(4, 3))
+    plt.figure(figsize=(1.5+2*len(set(input_df["method"])),3))
     sns.set(font_scale=0.8, style="whitegrid")
 
     g = sns.barplot(x="method", hue="network", y="F1", data=input_df, palette="Set2")
-    g.set(ylim=(0, 1))
-    g.legend(loc=0)
+    g.set(ylim=(0, 1), xlabel='Method')
+    g.legend(title="Reference network", bbox_to_anchor=(1.01, 0.5), loc="center left", borderaxespad=0)
     plt.tight_layout() # else saving will cut of the axis labels
 
     plt.savefig(output_path, dpi=300)

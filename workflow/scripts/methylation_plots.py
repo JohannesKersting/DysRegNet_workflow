@@ -7,6 +7,8 @@ import argparse
 import os
 import sys
 
+from commons import method_lut, network_lut
+
 
 
 def get_input_info(path):
@@ -55,22 +57,11 @@ def main():
     input_paths_global = args.inputs_global
     output_path = args.output
 
-
-    # map input paths
-    method_lut = {"dysregnet": "DysRegNet",
-                  "ssn": "SSN",
-                  }
-    network_lut = {"exp": "experimental",
-                   "string": "string",
-                   "genie3_shared": "genie3 shared",
-                   "genie3_individual": "genie3 individual",
-                   }
-
     input_infos = [get_input_info(path) for path in input_paths_local]
 
     input_df = pd.DataFrame(input_infos, columns=["local_path", "method", "norm_method", "network"])
-    input_df["method"] = input_df["method"].map(method_lut)
-    input_df["network"] = input_df["network"].map(network_lut)
+    input_df["method"] = input_df["method"].map(lambda x: method_lut[x] if x in method_lut.keys() else x)
+    input_df["network"] = input_df["network"].map(lambda x: network_lut[x] if x in network_lut.keys() else x)
     input_df.insert(1, "global_path", input_paths_global)
 
     print(f"input_df: \n{input_df.to_string()}\n")
@@ -91,6 +82,7 @@ def main():
 
             result = (
                 row["network"],
+                row["method"],
                 cancer_type,
                 n_signif,
                 n_tests,
@@ -99,7 +91,7 @@ def main():
             methylation_test_data.append(result)
 
     methylation_test_df = pd.DataFrame(methylation_test_data,
-                                       columns=["network", "cancer", "number significant", "number of tests",
+                                       columns=["network", "method", "cancer", "number significant", "number of tests",
                                                 "global p-value"]
                                        )
     methylation_test_data = None
@@ -111,24 +103,26 @@ def main():
 
     # plot
     sns.set(style="whitegrid")
-    plt.figure(figsize=(4, 8))
+    y = "cancer"
+    col = "network"
+    hue = "method"
 
-    ax = sns.barplot(x="% of significant associations", hue="network", y="cancer", data=methylation_test_df,
-                     palette="Set2")
+    g = sns.catplot(
+        methylation_test_df, kind="bar",
+        x="% of significant associations", y=y, col=col, hue=hue, palette="Set1",
+        height=6, aspect=0.5, legend=None
+    )
+    g.set_titles(col_template="{col_name}", row_template="{row_name}")
+    g.add_legend(title="Method")
 
-    ax.legend(title="Reference network", bbox_to_anchor=(0, 1.03), loc="lower left", borderaxespad=0)
-    ax.set(xlim=(0, 35))
-    plt.tight_layout()
-    plt.ylabel("Cancer")
+    # iterate through subplots
+    for i, ax in enumerate(g.axes.ravel()):
+        # iterate through containers (one per hue)
+        for j, c in enumerate(ax.containers):
+            sub_df = methylation_test_df.query(f'{hue}=="{c.get_label()}" and {col}=="{ax.get_title()}"')
 
-    for index, row in methylation_test_df.iterrows():
-        p = ax.patches[index]
-        if row["global p-value"] < 0.05:
-            ax.annotate("*",
-                        (p.get_x() + p.get_width() + 0.3, p.get_y() + 0.25),
-                        xytext=(0, 0),
-                        textcoords='offset points'
-                        )
+            labels = [u'\u2217 ' if row["global p-value"] < 0.05 else "" for index, row in sub_df.iterrows()]
+            ax.bar_label(c, labels=labels)
 
     plt.savefig(output_path, dpi=300)
     plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)

@@ -469,19 +469,19 @@ rule methylation_plots:
         inputs_local = lambda wildcards: expand(
             rules.methylation_tests.output.local_out,
             ref_net_type=get_ref_net_types(wildcards.norm_method),
-            method=wildcards.method,
+            method=METHODS,
             norm_method=wildcards.norm_method,
         ),
         inputs_global = lambda wildcards: expand(
             rules.methylation_tests.output.global_out,
             ref_net_type=get_ref_net_types(wildcards.norm_method),
-            method=wildcards.method,
+            method=METHODS,
             norm_method=wildcards.norm_method,
         ),
     output:
-        f"{RESULT_DIR}/figures/omics_analysis/{{method}}/methylation/methylation-{{method}}-{{norm_method}}.png"
+        f"{RESULT_DIR}/figures/methylation/methylation-{{norm_method}}.png"
     log:
-        "logs/methylation_plots/{method}-{norm_method}.log"
+        "logs/methylation_plots/-{norm_method}.log"
     shell:
         "python workflow/scripts/methylation_plots.py "
         "--inputs_local {input.inputs_local} "
@@ -495,19 +495,19 @@ rule methylation_zscores_plots:
         inputs_local = lambda wildcards: expand(
             rules.methylation_zscores_tests.output.local_out,
             ref_net_type=get_ref_net_types(wildcards.norm_method),
-            method=wildcards.method,
+            method=METHODS,
             norm_method=wildcards.norm_method,
         ),
         inputs_global = lambda wildcards: expand(
             rules.methylation_zscores_tests.output.global_out,
             ref_net_type=get_ref_net_types(wildcards.norm_method),
-            method=wildcards.method,
+            method=METHODS,
             norm_method=wildcards.norm_method,
         ),
     output:
-        f"{RESULT_DIR}/figures/omics_analysis/{{method}}/methylation_zscores/methylation_zscores-{{method}}-{{norm_method}}.png"
+        f"{RESULT_DIR}/figures/methylation/methylation_zscores-{{norm_method}}.png"
     log:
-        "logs/methylation_zscores_plots/{method}-{norm_method}.log"
+        "logs/methylation_zscores_plots/{norm_method}.log"
     shell:
         "python workflow/scripts/methylation_plots.py "
         "--inputs_local {input.inputs_local} "
@@ -766,20 +766,20 @@ rule all:
 
         # clustering heatmaps shared
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-{ref_net}.png",
-            result_dir=RESULT_DIR, method=OL_METHODS, norm_method=NORM_METHODS, ref_net=["exp", "string"]
+            result_dir=RESULT_DIR, method=OL_METHODS, norm_method="tpm", ref_net=["exp", "string"]
         ),
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-genie3_shared_{norm_method}.top_100k.png",
-            result_dir=RESULT_DIR, method=OL_METHODS, norm_method=NORM_METHODS
+            result_dir=RESULT_DIR, method=OL_METHODS, norm_method="tpm"
         ),
 
         # clustering benchmark shared
-        expand(rules.clustering_benchmark_shared.output, norm_method=NORM_METHODS),
+        expand(rules.clustering_benchmark_shared.output, norm_method="tpm"),
 
         # methylation plots
-        expand(rules.methylation_plots.output, method=METHODS, norm_method=NORM_METHODS),
+        expand(rules.methylation_plots.output, method=METHODS, norm_method="tpm"),
 
         # methylation zscores plots
-        expand(rules.methylation_zscores_plots.output, method=METHODS, norm_method=NORM_METHODS),
+        expand(rules.methylation_zscores_plots.output, method=METHODS, norm_method="tpm"),
 
         # mutation tests
         [expand(rules.mutation_tests.output, method=METHODS, norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method),  n_mut_patients=[2,4,6])

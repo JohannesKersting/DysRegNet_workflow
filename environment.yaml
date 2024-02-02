@@ -1,4 +1,4 @@
-name: drn_workflow
+name: drn
 channels:
 - conda-forge
 - bioconda
@@ -17,6 +17,7 @@ dependencies:
 - seaborn =0.12.1
 - colorcet =3.0.1
 - munkres =1.1.4
+- jupyterlab
 - pip
 - pip:
     - dysregnet ==0.0.4
