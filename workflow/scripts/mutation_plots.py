@@ -6,6 +6,7 @@ import argparse
 import os
 import sys
 import colorcet as cc
+from commons import method_lut, network_lut
 
 
 def get_input_info(path):
@@ -58,21 +59,12 @@ def main():
     output_path = args.output
     output_global_path = args.output_global
 
-    # map input files
-    method_lut = {"dysregnet": "DysRegNet",
-                  "ssn": "SSN",
-                  }
-    network_lut = {"exp": "experimental",
-                   "string": "string",
-                   "genie3_shared": "genie3 shared",
-                   "genie3_individual": "genie3 individual",
-                   }
 
     input_infos = [get_input_info(path) for path in input_paths_local]
 
     input_df = pd.DataFrame(input_infos, columns=["local_path", "method", "norm_method", "network"])
-    input_df["method"] = input_df["method"].map(method_lut)
-    input_df["network"] = input_df["network"].map(network_lut)
+    input_df["method"] = input_df["method"].map(lambda x: method_lut[x] if x in method_lut.keys() else x)
+    input_df["network"] = input_df["network"].map(lambda x: network_lut[x] if x in network_lut.keys() else x)
     input_df.insert(1, "global_path", input_paths_global)
 
     print(f"input_df: \n{input_df.to_string()}\n")
@@ -84,6 +76,7 @@ def main():
         global_tests_df = pd.read_csv(row["global_path"])
         global_tests_df.sort_values(by=['cancer'], inplace=True)
         global_tests_df["network"] = row["network"]
+        global_tests_df["method"] = row["method"]
         mutation_test_data.append(global_tests_df)
 
     mutation_test_df = pd.concat(mutation_test_data, ignore_index=True)
@@ -93,22 +86,36 @@ def main():
     mutation_test_df["Globally sig."] = np.where(mutation_test_df["global_pval"] < 0.05, 'yes', 'no')
     mutation_test_df = mutation_test_df.rename(columns={"cancer": "Cancer"})
 
+    # drop rows with less than 30 tested tfs
+    mutation_test_df = mutation_test_df.query(f'n_tfs >= 30')
+
     print(f"mutation_test_df: \n{mutation_test_df.to_string()}\n")
 
 
     # plot
     sns.set(style="whitegrid")
-    cancer_types = sorted(list(set(mutation_test_df["Cancer"])))
-    palette = sns.color_palette(cc.glasbey_light, n_colors=len(cancer_types) + 1)[1:]
-    palette_dict = dict(zip(cancer_types, palette))
+    y = "% of significant associations"
+    col = "network"
+    hue = "method"
+    x = "Cancer"
 
-    g = sns.relplot(data=mutation_test_df, x="n_tfs", y="% of significant associations", hue="Cancer",
-                    style="Globally sig.", col="network",
-                    s=90, style_order=["no", "yes"], hue_order=cancer_types, height=3, aspect=1.6, col_wrap=2,
-                    palette=palette_dict)
-    g.set_axis_labels("Number of tests")
-    g.set_titles(col_template="{col_name}")
-    g.tight_layout()
+    g = sns.catplot(
+        mutation_test_df, kind="bar", col_wrap=2,
+        x=x, y=y, col=col, hue=hue, palette="Set1",
+        height=6, aspect=1.5, legend=None, sharex=False,
+    )
+    g.set_titles(col_template="{col_name}", row_template="{row_name}")
+    g.add_legend(title="Method")
+
+    # iterate through subplots
+    for i, ax in enumerate(g.axes.ravel()):
+        # iterate through containers (one per hue)
+        for j, c in enumerate(ax.containers):
+            sub_df = mutation_test_df.query(f'{hue}=="{c.get_label()}" and {col}=="{ax.get_title()}"')
+
+            labels = [u'\u2217 ' if row["global_pval"] < 0.05 else "" for index, row in sub_df.iterrows()]
+            print(f"{ax.get_title()} {c.get_label()} {len(labels)}")
+            ax.bar_label(c, labels=labels)
 
     plt.savefig(output_path, dpi=300)
     plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)
@@ -116,15 +123,18 @@ def main():
 
     # global p-values plot
     sns.set(style="whitegrid")
-    plt.figure(figsize=(8, 4))
+
     mutation_test_df["transformed_pval"] = -np.log10(mutation_test_df["global_pval"])
 
-    g = sns.barplot(x="Cancer", hue="network", y="transformed_pval", data=mutation_test_df,
-                    palette="Set2", dodge=True)
-    g.axhline(-np.log10(0.05), ls="--", label="0.05 significance threshold")
-    g.set(ylabel='-log10(p-value)')
-    g.legend()
-    plt.tight_layout()
+    g = sns.catplot(
+        mutation_test_df, kind="bar",
+        x="Cancer", y="transformed_pval", col="network", hue="method", palette="Set1", col_wrap=2,
+        height=6, aspect=1.5, legend=None, sharex=False, sharey=False
+    )
+    g.set_titles(col_template="{col_name}", row_template="{row_name}")
+    g.set(ylabel=r'$-\log_{10}$(p-value)')
+    g.add_legend(title="Method")
+    g.refline(y=-np.log10(0.05))
 
     plt.savefig(output_global_path, dpi=300)
     plt.savefig(os.path.splitext(output_global_path)[0] + '.pdf', dpi=300)

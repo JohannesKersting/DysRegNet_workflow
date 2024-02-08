@@ -545,22 +545,22 @@ rule mutation_plots:
         inputs_local = lambda wildcards: expand(
             rules.mutation_tests.output.local_out,
             ref_net_type=get_ref_net_types(wildcards.norm_method),
-            method=wildcards.method,
+            method=METHODS,
             norm_method=wildcards.norm_method,
             n_mut_patients=wildcards.n_mut_patients,
         ),
         inputs_global = lambda wildcards: expand(
             rules.mutation_tests.output.global_out,
             ref_net_type=get_ref_net_types(wildcards.norm_method),
-            method=wildcards.method,
+            method=METHODS,
             norm_method=wildcards.norm_method,
             n_mut_patients=wildcards.n_mut_patients,
         ),
     output:
-        both=f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation/mutation-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png",
-        global_pvals=f"{RESULT_DIR}/figures/omics_analysis/{{method}}/mutation/mutation_global-{{method}}-{{norm_method}}-min{{n_mut_patients}}.png"
+        both=f"{RESULT_DIR}/figures/mutation_analysis/mutation-{{norm_method}}-min{{n_mut_patients}}.png",
+        global_pvals=f"{RESULT_DIR}/figures/mutation_analysis/mutation_global-{{norm_method}}-min{{n_mut_patients}}.png"
     log:
-        "logs/mutation_plots/{method}-{norm_method}-min{n_mut_patients}.log"
+        "logs/mutation_plots/{norm_method}-min{n_mut_patients}.log"
     shell:
         "python workflow/scripts/mutation_plots.py "
         "--inputs_local {input.inputs_local} "
@@ -786,7 +786,7 @@ rule all:
          for norm_method in NORM_METHODS],
 
         # mutation plots
-        expand(rules.mutation_plots.output, method=METHODS, norm_method=NORM_METHODS, n_mut_patients=[2,4,6]),
+        expand(rules.mutation_plots.output, norm_method="tpm", n_mut_patients=[2,4,6]),
 
         # model stats
         expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
