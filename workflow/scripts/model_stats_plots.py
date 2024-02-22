@@ -9,6 +9,7 @@ import sys
 import math
 import statsmodels.stats.multitest as mt
 import colorcet as cc
+from commons import method_lut, network_lut
 
 
 def get_input_info(path):
@@ -64,22 +65,13 @@ def main():
 
 
     # get input path infos
-    method_lut = {"dysregnet": "DysRegNet",
-                  "ssn": "SSN",
-                  }
-    network_lut = {"exp": "experimental",
-                   "string": "string",
-                   "genie3_shared": "genie3 shared",
-                   "genie3_individual": "genie3 individual",
-                   }
-
     input_infos = [get_input_info(path) for path in input_paths]
 
     input_df = pd.DataFrame(input_infos, columns=["path", "cancer", "method", "norm_method", "network"])
-    input_df["method"] = input_df["method"].map(method_lut)
-    input_df["network"] = input_df["network"].map(network_lut)
-    # mapping does not work for individual networks
-    input_df.fillna('genie3 individual', inplace=True)
+    input_df["method"] = input_df["method"].map(lambda x: method_lut[x] if x in method_lut.keys() else x)
+    input_df["network"] = input_df["network"].map(
+        lambda x: "genie3_individual" if (("genie3" in x) and (not "shared" in x)) else x)
+    input_df["network"] = input_df["network"].map(lambda x: network_lut[x] if x in network_lut.keys() else x)
 
     print(input_df.to_string())
 
@@ -88,6 +80,7 @@ def main():
     stats_data = []
     for index, row in input_df.iterrows():
         df = pd.read_csv(row["path"], index_col=0)
+        df["edge"] = df.index
         df["Cancer"] = row["cancer"]
         df["network"] = row["network"]
         stats_data.append(df)
@@ -154,18 +147,19 @@ def main():
     networks = list(set(input_df["network"]))
 
     count_sign_list = []
+    pval_stats_list = []
     for network in networks:
         coef_stats_df = stats_df[stats_df["network"] == network].copy()
 
         # get column name mappings
-        coef_stats_slim_df = coef_stats_df.drop(columns=["network", "R2", "Cancer"])
+        coef_stats_slim_df = coef_stats_df.drop(columns=["network", "R2", "Cancer", "edge"])
         type_lut = {col: col.split("_")[0] for col in coef_stats_slim_df.columns.values}
         confounder_lut = {col: col.split("_")[1] for col in coef_stats_slim_df.columns.values}
         coef_stats_slim = None
 
         # cast to long data and add categories
-        coef_stats_df = coef_stats_df.drop(columns=["network", "R2"])
-        coef_stats_df = pd.melt(coef_stats_df, id_vars="Cancer")
+        coef_stats_df = coef_stats_df.drop(columns=["R2", "edge"])
+        coef_stats_df = pd.melt(coef_stats_df, id_vars=["Cancer", "network"])
         coef_stats_df["type"] = coef_stats_df["variable"].map(type_lut)
         coef_stats_df["confounder"] = coef_stats_df["variable"].map(confounder_lut)
         coef_stats_df.drop(columns="variable", inplace=True)
@@ -173,8 +167,14 @@ def main():
         # rename birth category
         coef_stats_df.loc[coef_stats_df["confounder"] == "birth", "confounder"] = "age"
 
+        # rename ethnicity category
+        coef_stats_df.loc[coef_stats_df["confounder"] == "race", "confounder"] = "ethnicity"
+
         # drop NAs
         coef_stats_df = coef_stats_df.dropna()
+
+        # add p-values to pval_stats_list
+        pval_stats_list.append(coef_stats_df.query("type=='pval' and confounder!='intercept'").drop("type", axis=1))
 
         sns.set(style="whitegrid")
         cancer_types = sorted(list(set(input_df["cancer"])))
@@ -232,9 +232,27 @@ def main():
         count_sign_list.append(count_sign_df)
 
     count_sign_df = pd.concat(count_sign_list, ignore_index=True)
+    pval_stats_df = pd.concat(pval_stats_list, ignore_index=True)
 
     # save model stats summary
     count_sign_df.to_csv(output_stats_summary, index=False, sep="\t")
+
+   # plot p-value distributions across all networks
+    sns.set(style="whitegrid")
+    g = sns.FacetGrid(pval_stats_df, row="network", height=3, aspect=5, sharey="row")
+    g.map_dataframe(sns.violinplot, x="confounder", y="value", hue="Cancer", hue_order=cancer_types, palette=palette_dict, cut=0)
+    g.set_titles(col_template="{col_name}", row_template="{row_name}")
+    g.set_xlabels("")
+    g.set_ylabels("P-value")
+    g.add_legend(title="Cancer")
+
+    for row_val, ax in g.axes_dict.items():
+        ax.axhline(0.05)
+
+    g.tight_layout()
+
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-all.png"), dpi=300)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-all.pdf"), dpi=300)
 
 
 
