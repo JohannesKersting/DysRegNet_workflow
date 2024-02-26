@@ -3,6 +3,8 @@ from snakemake.utils import min_version
 import pandas as pd
 import os
 
+from itertools import product
+
 min_version("7.18")
 
 DATA_DIR = "/nfs/data/patients_networks/data"
@@ -29,6 +31,8 @@ OL_METHODS = METHODS+["dysregnet_signed","dysregnet_no_direction_signed"] # meth
 
 # map different normalization methods to their sample sheets
 META_MAP = {"tpm":"tpm", "mrn":"expected_counts"}
+
+
 
 
 wildcard_constraints:
@@ -96,6 +100,12 @@ def get_ref_net_names(ref_net_type, norm_method, cancer_types = CANCER_TYPES):
 
 
 
+network_df = pd.DataFrame.from_dict(
+    [
+        {"cancer_type": combi[2], "norm_method": combi[1], "ref_net": get_ref_net_names(combi[0],combi[1],[combi[2]])[0]}
+        for combi in product(REF_NET_TYPES,NORM_METHODS,CANCER_TYPES)
+    ]
+)
 
 #### reference network preparation ####
 
@@ -572,11 +582,10 @@ rule mutation_plots:
 
 rule model_stats_plots:
     input:
-        lambda wildcards: expand("{result_dir}/patient_networks/{cancer_type}/dysregnet/{norm_method}-{ref_net}-stats.csv", zip,
-        result_dir=[RESULT_DIR] * len(CANCER_TYPES) * len(REF_NET_TYPES),
-        norm_method=[wildcards.norm_method] * len(CANCER_TYPES) * len(REF_NET_TYPES),
-        cancer_type=CANCER_TYPES * len(REF_NET_TYPES),
-        ref_net=[ref_net for ref_net_type in REF_NET_TYPES for ref_net in get_ref_net_names(ref_net_type,wildcards.norm_method)],
+        lambda wildcards: expand(f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet/{{norm_method}}-{{ref_net}}-stats.csv", zip,
+            cancer_type = network_df.query(f"norm_method=='{wildcards.norm_method}'").cancer_type,
+            norm_method=network_df.query(f"norm_method=='{wildcards.norm_method}'").norm_method,
+            ref_net=network_df.query(f"norm_method=='{wildcards.norm_method}'").ref_net,
         )
     output:
         dir=directory(f"{RESULT_DIR}/figures/model_stats/{{norm_method}}/"),
