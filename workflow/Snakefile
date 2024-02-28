@@ -601,6 +601,25 @@ rule model_stats_plots:
         "--output_stats_summary {output.stats_summary} "
         "&> {log}"
 
+
+rule total_dysregulations_plots:
+    input:
+        lambda wildcards: expand([f"{RESULT_DIR}/patient_networks/{{cancer_type}}/{method}/{{norm_method}}-{{ref_net}}.fea" for method in METHODS], zip,
+            cancer_type = network_df.query(f"norm_method=='{wildcards.norm_method}'").cancer_type,
+            norm_method=network_df.query(f"norm_method=='{wildcards.norm_method}'").norm_method,
+            ref_net=network_df.query(f"norm_method=='{wildcards.norm_method}'").ref_net,
+        )
+    output:
+        f"{RESULT_DIR}/figures/total_dysregulations/total_dysregulations-{{norm_method}}.png",
+    log:
+        "logs/total_dysregulations_plots/{norm_method}.log"
+    shell:
+        "python workflow/scripts/total_dysregulations_plots.py "
+        "--inputs {input} "
+        "--output {output} "
+        "&> {log}"
+
+
 rule cancer_stage_tests:
     input:
         network = lambda wildcards:
@@ -802,6 +821,9 @@ rule all:
 
         # cancer stage plots
         expand(rules.cancer_stage_plots.output, norm_method="tpm"),
+
+        #total dysregulations plots
+        expand(rules.total_dysregulations_plots.output, norm_method="tpm"),
 
         # run time benchmark
         rules.runtime_plots.output,
