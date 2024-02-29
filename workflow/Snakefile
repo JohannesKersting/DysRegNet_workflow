@@ -197,6 +197,21 @@ rule mrn_normalization:
     shell:
         "Rscript workflow/scripts/mrn_normalization.R {input.expr} {input.meta} {output} >& {log}"
 
+rule sample_infos:
+    input:
+        lambda wildcards: expand(
+            "{result_dir}/expression_processed/{cancer_type}/{meta}_meta.csv",
+            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES, meta=META_MAP[wildcards.norm_method]
+        )
+    output:
+        f"{RESULT_DIR}/sample_infos/sample_infos_{{norm_method}}.tsv"
+    log:
+        "logs/sample_infos/{norm_method}.log"
+    shell:
+        "python workflow/scripts/sample_infos.py "
+        "--inputs {input} "
+        "--output {output} &> {log}"
+
 
 #### methylation data pre-processing
 
@@ -791,6 +806,9 @@ rule all:
             norm_method = NORM_METHODS,
             ref_net =["exp","string"]
         ),
+
+        # sample infos
+        expand(rules.sample_infos.output, norm_method=NORM_METHODS),
 
         # clustering heatmaps shared
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-{ref_net}.png",
