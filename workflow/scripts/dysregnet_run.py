@@ -30,9 +30,12 @@ parser.add_argument("--no_direction", action="store_true",
 parser.add_argument('--output', type=str, required=True,
                     help='The output file path (feather).'
                     )
+parser.add_argument("--pvalue", help="Define a p-value threshold for edges", default=0.01,
+                    required=False)
 parser.add_argument('--output_stats', type=str, required=True,
                     help='The stats output file path (csv).'
                     )
+
 
 args = parser.parse_args()
 
@@ -48,6 +51,7 @@ catCovCandidates = ["gender", "race"]
 conCol = "condition"
 idCol = "sample"
 direction_condition = not args.no_direction
+bonferroni_alpha = args.pvalue
 
 
 # Read data
@@ -105,13 +109,14 @@ for cov in catCovCandidates:
 
 
 # Run dysregnet
-data=dysregnet.run(expression_data=expr,
+data = dysregnet.run(expression_data=expr,
                    meta=meta,
                    CatCov=catCov,
                    ConCov=conCov,
                    GRN=grn,
                    conCol=conCol,
-                   direction_condition=direction_condition)
+                   direction_condition=direction_condition,
+                   bonferroni_alpha=bonferroni_alpha)
 
 result = data.get_results()
 stats = data.get_model_stats()

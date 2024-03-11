@@ -25,9 +25,9 @@ KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
 
 CANCER_TYPES = ["BRCA", "COAD", "HNSC", "KIRC", "KIRP", "LIHC", "LUAD", "LUSC", "PRAD", "STAD", "THCA", ]
 NORM_METHODS = ["tpm", "mrn"]
-METHODS = ["dysregnet", "dysregnet_no_direction", "ssn"]
+METHODS = ["dysregnet", "dysregnet_no_direction", "dysregnet_05", "ssn"]
 REF_NET_TYPES = ['exp', 'string', 'genie3_shared', 'genie3_individual']
-OL_METHODS = METHODS+["dysregnet_signed","dysregnet_no_direction_signed"] # method names, dysregnet also has "_signed" extension
+OL_METHODS = METHODS #+["dysregnet_signed","dysregnet_no_direction_signed"] # method names, dysregnet also has "_signed" extension
 
 # map different normalization methods to their sample sheets
 META_MAP = {"tpm":"tpm", "mrn":"expected_counts"}
@@ -324,6 +324,28 @@ rule dysregnet_no_direction:
         "--output_stats {output.stats} " 
         "&> {log}"
 
+rule dysregnet_05:
+    input:
+        expr = f"{RESULT_DIR}/expression_processed/{{cancer_type}}/{{norm_method}}.csv",
+        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
+        grn =  get_ref_net_path
+    output:
+        networks = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet_05/{{norm_method}}-{{ref_net}}.fea",
+        stats = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet_05/{{norm_method}}-{{ref_net}}-stats.csv",
+
+    log:
+        "logs/dysregnet_05/{cancer_type}/{norm_method}-{ref_net}.log"
+    shell:
+        "python workflow/scripts/dysregnet_run.py "
+        "--expr {input.expr} "
+        "--meta {input.meta} "
+        "--grn {input.grn} "
+        "--no_direction "
+        "--pvalue 0.05 "
+        "--output {output.networks} "
+        "--output_stats {output.stats} " 
+        "&> {log}"
+
 
 rule ssn:
     input:
@@ -375,7 +397,7 @@ rule compute_overlap_shared:
         nodes = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/compute_overlap_shared/{method}/overlap-{norm_method}-{ref_net}.log"
-    threads: 20
+    threads: 2
     shell:
         "python workflow/scripts/compute_overlap.py "
         "--input {input} "
@@ -394,7 +416,7 @@ rule compute_overlap_shared_signed:
         nodes = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}_signed/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
     log:
         "logs/compute_overlap_shared/{method}_signed/overlap-{norm_method}-{ref_net}.log"
-    threads: 20
+    threads: 2
     benchmark:
         "logs/compute_overlap_shared/{method}_signed/overlap-{norm_method}-{ref_net}.benchmark.txt"
     shell:
@@ -803,7 +825,7 @@ rule all:
             result_dir=RESULT_DIR,
             cancer_type = CANCER_TYPES,
             method = METHODS,
-            norm_method = NORM_METHODS,
+            norm_method = "tpm",
             ref_net =["exp","string"]
         ),
 
@@ -829,13 +851,13 @@ rule all:
 
         # mutation tests
         [expand(rules.mutation_tests.output, method=METHODS, norm_method=norm_method, ref_net_type=get_ref_net_types(norm_method),  n_mut_patients=[2,4,6])
-         for norm_method in NORM_METHODS],
+         for norm_method in ["tpm"]],
 
         # mutation plots
         expand(rules.mutation_plots.output, norm_method="tpm", n_mut_patients=[2,4,6]),
 
         # model stats
-        expand(rules.model_stats_plots.output, norm_method=NORM_METHODS),
+        expand(rules.model_stats_plots.output, norm_method="tpm"),
 
         # cancer stage plots
         expand(rules.cancer_stage_plots.output, norm_method="tpm"),
