@@ -30,7 +30,7 @@ parser.add_argument("--no_direction", action="store_true",
 parser.add_argument('--output', type=str, required=True,
                     help='The output file path (feather).'
                     )
-parser.add_argument("--pvalue", help="Define a p-value threshold for edges", default=0.01,
+parser.add_argument("--pvalue", help="Define a p-value threshold for edges", default=0.01, type=float,
                     required=False)
 parser.add_argument('--output_stats', type=str, required=True,
                     help='The stats output file path (csv).'
