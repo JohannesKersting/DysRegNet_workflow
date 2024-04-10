@@ -9,6 +9,7 @@ min_version("7.18")
 
 DATA_DIR = "/nfs/data/patients_networks/data"
 RESULT_DIR = "results"
+
 WORKFLOW_DIR=str(os.path.abspath(str(workflow.current_basedir)+"/../"))
 DB_DIR = os.path.join(WORKFLOW_DIR, "neo4j_db")
 DB_PW = "fMb8TF5U?kY-HP"
@@ -135,31 +136,6 @@ rule prepare_string:
 
 #### expression data pre-processing ####
 
-rule process_pancan_expected_counts:
-    input:
-        meta = f"{DATA_DIR}/{META_FILE}",
-        clinical = f"{DATA_DIR}/{CLINICAL_FILE}",
-        expr = f"{DATA_DIR}/{RAW_EXPR_COUNTS_FILE}",
-        mapping = f"{DATA_DIR}/{MAPPING_FILE}",
-    params:
-        out_dir = f"{RESULT_DIR}/expression_processed",
-    output:
-        expand("{result_dir}/expression_processed/{cancer_type}/expected_counts.csv",
-            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES),
-        expand("{result_dir}/expression_processed/{cancer_type}/expected_counts_meta.csv",
-            result_dir=RESULT_DIR, cancer_type=CANCER_TYPES)
-    log:
-        "logs/process_pancan_expected_counts.log"
-    shell:
-        "python workflow/scripts/process_pancan_expected_counts.py "
-        "--meta {input.meta} "
-        "--clinical {input.clinical} "
-        "--expr {input.expr} "
-        "--mapping {input.mapping} "
-        "--out_dir {params.out_dir} "
-        " >& {log}"
-
-
 rule process_pancan_tpm:
     input:
         meta = f"{DATA_DIR}/{META_FILE}",
@@ -184,18 +160,6 @@ rule process_pancan_tpm:
         "--out_dir {params.out_dir} "
         ">& {log} "
 
-
-rule mrn_normalization:
-    input:
-        expr=f"{RESULT_DIR}/expression_processed/{{cancer_type}}/expected_counts.csv",
-        meta=f"{RESULT_DIR}/expression_processed/{{cancer_type}}/expected_counts_meta.csv",
-    output:
-        f"{RESULT_DIR}/expression_processed/{{cancer_type}}/mrn.csv"
-    log:
-        "logs/mrn_normalization/mrn_normalization_{cancer_type}.log"
-    threads: 8
-    shell:
-        "Rscript workflow/scripts/mrn_normalization.R {input.expr} {input.meta} {output} >& {log}"
 
 rule sample_infos:
     input:
@@ -324,29 +288,6 @@ rule dysregnet_no_direction:
         "--output_stats {output.stats} " 
         "&> {log}"
 
-rule dysregnet_05:
-    input:
-        expr = f"{RESULT_DIR}/expression_processed/{{cancer_type}}/{{norm_method}}.csv",
-        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
-        grn =  get_ref_net_path
-    output:
-        networks = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet_05/{{norm_method}}-{{ref_net}}.fea",
-        stats = f"{RESULT_DIR}/patient_networks/{{cancer_type}}/dysregnet_05/{{norm_method}}-{{ref_net}}-stats.csv",
-
-    log:
-        "logs/dysregnet_05/{cancer_type}/{norm_method}-{ref_net}.log"
-    shell:
-        "python workflow/scripts/dysregnet_run.py "
-        "--expr {input.expr} "
-        "--meta {input.meta} "
-        "--grn {input.grn} "
-        "--no_direction "
-        "--pvalue 0.05 "
-        "--output {output.networks} "
-        "--output_stats {output.stats} " 
-        "&> {log}"
-
-
 rule ssn:
     input:
         expr = f"{RESULT_DIR}/expression_processed/{{cancer_type}}/{{norm_method}}.csv",
@@ -363,28 +304,6 @@ rule ssn:
         "--grn {input.grn} "
         "--output {output} "
         "&> {log}"
-
-
-rule lioness:
-    input:
-        expr = f"{RESULT_DIR}/expression_processed/{{cancer_type}}/{{norm_method}}.csv",
-        meta = lambda wildcards: f"{RESULT_DIR}/expression_processed/{wildcards.cancer_type}/{META_MAP[wildcards.norm_method]}_meta.csv",
-        grn =  get_ref_net_path
-    output:
-        f"{RESULT_DIR}/patient_networks/{{cancer_type}}/lioness/{{norm_method}}-{{ref_net}}.fea"
-    log:
-        "logs/lioness/{cancer_type}/{norm_method}-{ref_net}.log"
-    benchmark:
-        "logs/lioness/{cancer_type}/{norm_method}-{ref_net}.txt"
-    shell:
-        "Rscript workflow/scripts/lioness_run.R "
-        "--expr {input.expr} "
-        "--meta {input.meta} "
-        "--grn {input.grn} "
-        "--output {output} "
-        "&> {log}"
-
-
 
 #### benchmark and omics analysis ####
 
@@ -406,29 +325,6 @@ rule compute_overlap_shared:
         "--output_edges {output.edges} "
         "--output_nodes {output.nodes} "
         "&> {log}"
-
-rule compute_overlap_shared_signed:
-    input:
-        expand("{result_dir}/patient_networks/{cancer_type}/{{method}}/{{norm_method}}-{{ref_net}}.fea",
-            result_dir=RESULT_DIR,cancer_type=CANCER_TYPES),
-    output:
-        edges = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}_signed/overlap_edges-{{norm_method}}-{{ref_net}}.fea",
-        nodes = f"{RESULT_DIR}/benchmark/compute_overlap_shared/{{method}}_signed/overlap_nodes-{{norm_method}}-{{ref_net}}.fea"
-    log:
-        "logs/compute_overlap_shared/{method}_signed/overlap-{norm_method}-{ref_net}.log"
-    threads: 2
-    benchmark:
-        "logs/compute_overlap_shared/{method}_signed/overlap-{norm_method}-{ref_net}.benchmark.txt"
-    shell:
-        "python workflow/scripts/compute_overlap.py "
-        "--input {input} "
-        "--threads {threads} "
-        "--shared "
-        "--signed "
-        "--output_edges {output.edges} "
-        "--output_nodes {output.nodes} "
-        "&> {log}"
-
 
 rule clustering_shared:
     input:
@@ -759,7 +655,7 @@ rule runtime_plots:
 
 # not part of the target rules
 # load manually by running: snakemake --profile <profile> --force load_db
-# old data <DB_DIR>/data has to be deleted manually before updating ist
+# old data <DB_DIR>/data has to be deleted manually before updating
 
 localrules: provide_db, load_db
 
@@ -830,7 +726,7 @@ rule all:
         ),
 
         # sample infos
-        expand(rules.sample_infos.output, norm_method=NORM_METHODS),
+        expand(rules.sample_infos.output, norm_method="tpm"),
 
         # clustering heatmaps shared
         expand("{result_dir}/figures/clustering_shared/{method}/{method}-edges-{norm_method}-{ref_net}.png",
