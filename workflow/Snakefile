@@ -25,7 +25,7 @@ KNOWN_TFS_FILE = "genie3/TF_names_v_1.01.txt"
 
 CANCER_TYPES = ["BRCA", "COAD", "HNSC", "KIRC", "KIRP", "LIHC", "LUAD", "LUSC", "PRAD", "STAD", "THCA", ]
 NORM_METHODS = ["tpm", "mrn"]
-METHODS = ["dysregnet", "dysregnet_no_direction", "dysregnet_05", "ssn"]
+METHODS = ["dysregnet_no_direction", "ssn"] # ["dysregnet", "dysregnet_no_direction", "dysregnet_05", "ssn"]
 REF_NET_TYPES = ['exp', 'string', 'genie3_shared', 'genie3_individual']
 OL_METHODS = METHODS #+["dysregnet_signed","dysregnet_no_direction_signed"] # method names, dysregnet also has "_signed" extension
 
