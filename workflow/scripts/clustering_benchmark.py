@@ -72,7 +72,7 @@ def clustering_benchmark(overlaps_path, meta):
     meta_temp = meta.loc[patient_list]
 
     n_clusters = len(set(meta_temp._primary_disease))
-    clustering = SpectralClustering(affinity="precomputed", n_clusters=n_clusters).fit(overlaps)
+    clustering = SpectralClustering(affinity="precomputed", n_clusters=n_clusters, random_state=0).fit(overlaps)
 
     # get class names
     class_names = meta_temp._primary_disease.values
@@ -129,12 +129,12 @@ def main():
 
 
     # plotting
-    plt.figure(figsize=(1.5+2*len(set(input_df["method"])),3))
+    plt.figure(figsize=(2*len(set(input_df["method"])),3))
     sns.set(font_scale=0.8, style="whitegrid")
 
     g = sns.barplot(x="method", hue="network", y="F1", data=input_df, palette="Set2")
     g.set(ylim=(0, 1), xlabel='Method')
-    g.legend(title="Reference network", bbox_to_anchor=(1.01, 0.5), loc="center left", borderaxespad=0)
+    g.legend(title="Reference network", bbox_to_anchor=(1, 0), loc="lower right", borderaxespad=1)
     plt.tight_layout() # else saving will cut of the axis labels
 
     plt.savefig(output_path, dpi=300)

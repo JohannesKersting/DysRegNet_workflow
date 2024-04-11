@@ -72,27 +72,30 @@ def main():
     for index, row in input_df.iterrows():
         net = pd.read_feather(row["path"])
         net = net.set_index("patient id")
-        summary_list.append({
-            "cancer": row["cancer"],
-            "method": row["method"],
-            "norm_method": row["norm_method"],
-            "network": row["network"],
-            "total_dysregulations": np.sum(np.sum((net != 0))),
-            "ref_network_edges": net.shape[1],
-        })
+        for patient_index, patient_row in net.iterrows():
+            summary_list.append({
+                "cancer": row["cancer"],
+                "method": row["method"],
+                "patient": patient_index,
+                "norm_method": row["norm_method"],
+                "network": row["network"],
+                "dysregulated_edges": np.sum(patient_row != 0),
+            })
     summary_df = pd.DataFrame.from_dict(summary_list)
     summary_list = None
-    print(summary_df.to_string())
+
+    print(summary_df)
 
 
     # plot
     sns.set(style="whitegrid")
     g = sns.catplot(
-        summary_df, kind="bar",
-        y="total_dysregulations", x="cancer", col="network", col_wrap=2, hue="method", palette="Set1",
+        summary_df, kind="box",
+        y="dysregulated_edges", x="cancer", col="network", col_wrap=2, hue="method", palette="Set1",
         height=3, aspect=2, legend=None, sharey=False
     )
     g.set_titles(col_template="{col_name}", row_template="{row_name}")
+    [plt.setp(ax.get_xticklabels(), rotation=45) for ax in g.axes.flat]
     g.add_legend(title="Method")
     g.set_xlabels("Cancer")
     g.set_ylabels("Dysregulated edges")
