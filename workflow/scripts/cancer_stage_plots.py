@@ -90,8 +90,9 @@ def main():
     g = sns.catplot(
         summary_df, kind="bar",
         x="% of significant associations", y=y, col=col, hue=hue, palette="Set1",
-        height=6, aspect=0.5, legend=None
+        height=4, aspect=0.7, legend=None
     )
+    g.set_axis_labels("% of significant associations", "Cancer")
     g.set_titles(col_template="{col_name}", row_template="{row_name}")
     g.add_legend(title="Method")
 

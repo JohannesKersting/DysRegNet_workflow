@@ -102,10 +102,11 @@ def main():
     g = sns.catplot(
         mutation_test_df, kind="bar", col_wrap=2,
         x=x, y=y, col=col, hue=hue, palette="Set1",
-        height=6, aspect=1.5, legend=None, sharex=False,
+        height=3, aspect=2, legend=None, sharex=False,
     )
     g.set_titles(col_template="{col_name}", row_template="{row_name}")
     g.add_legend(title="Method")
+    g.set_axis_labels("Cancer", "% of significant associations")
 
     # iterate through subplots
     for i, ax in enumerate(g.axes.ravel()):

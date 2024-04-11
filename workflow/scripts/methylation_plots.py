@@ -114,6 +114,7 @@ def main():
     )
     g.set_titles(col_template="{col_name}", row_template="{row_name}")
     g.add_legend(title="Method")
+    g.set_axis_labels("% of significant associations", "Cancer")
 
     # iterate through subplots
     for i, ax in enumerate(g.axes.ravel()):
