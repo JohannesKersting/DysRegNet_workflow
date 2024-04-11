@@ -170,6 +170,9 @@ def main():
         # rename ethnicity category
         coef_stats_df.loc[coef_stats_df["confounder"] == "race", "confounder"] = "ethnicity"
 
+        # rename gender category
+        coef_stats_df.loc[coef_stats_df["confounder"] == "gender", "confounder"] = "sex"
+
         # drop NAs
         coef_stats_df = coef_stats_df.dropna()
 
@@ -201,6 +204,31 @@ def main():
 
         plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-confounders-{network}.png"), dpi=300)
         plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-confounders-{network}.pdf"), dpi=300)
+
+
+        # plot without coeficcients
+        g = sns.FacetGrid(coef_stats_df.query("confounder!='intercept' and type!='coef'"), row="type", height=3,
+                          aspect=5, sharey="row")
+        g.map_dataframe(sns.violinplot, x="confounder", y="value", hue="Cancer", hue_order=cancer_types,
+                        palette=palette_dict, cut=0)
+
+        g.set_titles(col_template="", row_template="")
+        g.set_xlabels("")
+        g.add_legend(title="Cancer")
+
+        for row_val, ax in g.axes_dict.items():
+            if row_val == "coef":
+                ax.set_ylabel("Coefficient")
+                ax.axhline(0)
+            elif row_val == "pval":
+                ax.set_ylabel("P-value")
+                ax.axhline(0.05)
+
+        g.tight_layout()
+
+        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-{network}.png"), dpi=300)
+        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-{network}.pdf"), dpi=300)
+        plt.show()
 
         # count significant p-values
         count_sign_df = pd.DataFrame(
