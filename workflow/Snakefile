@@ -672,7 +672,7 @@ rule provide_db:
         mkdir -p {DB_DIR}/logs &&
         chmod -R 777 {DB_DIR} &&
         docker run \
-        --user $UID:$GID \
+        --user $UID:$UID \
         --name neo4j_load_db \
         -p7474:7474 -p7687:7687 \
         -v {DB_DIR}/data:/data \
@@ -688,8 +688,8 @@ rule load_db:
     input:
         methylation=f"{DATA_DIR}/omics_analysis/methylation.csv",
         mutations = f"{DATA_DIR}/omics_analysis/somatic_mutations_Unified.csv",
-        networks = expand(rules.dysregnet.output.networks, cancer_type=CANCER_TYPES, norm_method="tpm", ref_net = "genie3_shared_tpm.top_100k"),
-        stats = expand(rules.dysregnet.output.stats, cancer_type=CANCER_TYPES, norm_method="tpm", ref_net = "genie3_shared_tpm.top_100k"),
+        networks = expand(rules.dysregnet_no_direction.output.networks, cancer_type=CANCER_TYPES, norm_method="tpm", ref_net = "genie3_shared_tpm.top_100k"),
+        stats = expand(rules.dysregnet_no_direction.output.stats, cancer_type=CANCER_TYPES, norm_method="tpm", ref_net = "genie3_shared_tpm.top_100k"),
         db_socket = rules.provide_db.output
     output:
         db_flag = touch(f'{DB_DIR}/flag.txt')
