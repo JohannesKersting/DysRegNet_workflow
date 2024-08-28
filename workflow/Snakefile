@@ -534,24 +534,41 @@ rule model_stats_plots:
         "--output_stats_summary {output.stats_summary} "
         "&> {log}"
 
-
-rule total_dysregulations_plots:
+rule network_stats:
     input:
-        lambda wildcards: expand([f"{RESULT_DIR}/patient_networks/{{cancer_type}}/{method}/{{norm_method}}-{{ref_net}}.fea" for method in METHODS], zip,
-            cancer_type = network_df.query(f"norm_method=='{wildcards.norm_method}'").cancer_type,
+        f"{RESULT_DIR}/patient_networks/{{cancer_type}}/{{method}}/{{norm_method}}-{{ref_net}}.fea"
+    output:
+        f"{RESULT_DIR}/network_stats/{{cancer_type}}/{{method}}/network_stats-{{norm_method}}-{{ref_net}}.csv"
+    log:
+        f"logs/network_stats/{{cancer_type}}/{{method}}/stage_tests-{{norm_method}}-{{ref_net}}.log"
+    shell:
+        "python workflow/scripts/network_stats.py "
+        "--input {input} "
+        "--output {output} "
+        "&> {log}"
+
+rule network_stats_plots:
+    input:
+        lambda wildcards: expand([f"{RESULT_DIR}/network_stats/{{cancer_type}}/{method}/network_stats-{{norm_method}}-{{ref_net}}.csv" for method in METHODS], zip,
+            cancer_type=network_df.query(f"norm_method=='{wildcards.norm_method}'").cancer_type,
             norm_method=network_df.query(f"norm_method=='{wildcards.norm_method}'").norm_method,
             ref_net=network_df.query(f"norm_method=='{wildcards.norm_method}'").ref_net,
         )
     output:
-        f"{RESULT_DIR}/figures/total_dysregulations/total_dysregulations-{{norm_method}}.png",
+        edges = f"{RESULT_DIR}/figures/network_stats/number_of_edges-{{norm_method}}.png",
+        nodes = f"{RESULT_DIR}/figures/network_stats/number_of_nodes-{{norm_method}}.png",
+        components = f"{RESULT_DIR}/figures/network_stats/number_of_components-{{norm_method}}.png",
+        nodes_per_component = f"{RESULT_DIR}/figures/network_stats/nodes_per_component-{{norm_method}}.png",
     log:
-        "logs/total_dysregulations_plots/{norm_method}.log"
+        "logs/network_stats_plots/{norm_method}.log"
     shell:
-        "python workflow/scripts/total_dysregulations_plots.py "
+        "python workflow/scripts/network_stats_plots.py "
         "--inputs {input} "
-        "--output {output} "
+        "--output_edges {output.edges} "
+        "--output_nodes {output.nodes} "
+        "--output_components {output.components} "
+        "--output_nodes_per_component {output.nodes_per_component} "
         "&> {log}"
-
 
 rule cancer_stage_tests:
     input:
@@ -759,8 +776,8 @@ rule all:
         # cancer stage plots
         expand(rules.cancer_stage_plots.output, norm_method="tpm"),
 
-        #total dysregulations plots
-        expand(rules.total_dysregulations_plots.output, norm_method="tpm"),
+        # network stats plots
+        expand(rules.network_stats_plots.output, norm_method="tpm"),
 
         # run time benchmark
         rules.runtime_plots.output,
