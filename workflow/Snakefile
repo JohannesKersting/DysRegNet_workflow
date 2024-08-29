@@ -667,6 +667,55 @@ rule runtime_plots:
         "--output {output} "
         "&> {log}"
 
+#### downsampling analysis ####
+
+DOWNSAMPLE_STEPS = [110,100,90,80,70,60,50,40,30,20]
+
+rule downsample_meta:
+    input:
+        lambda wildcards: f"{RESULT_DIR}/expression_processed/BRCA/{META_MAP[wildcards.norm_method]}_meta.csv",
+    output:
+        [f"{RESULT_DIR}/downsample/BRCA/meta_sheets/{step}-{{norm_method}}_meta.csv" for step in DOWNSAMPLE_STEPS]
+    log:
+        "logs/downsample_meta/{norm_method}.log"
+    shell:
+        "python workflow/scripts/downsample_meta.py "
+        "--input {input} "
+        "--outputs {output} "
+        "&> {log}"
+
+rule downsample_dysregnet:
+    input:
+        expr = f"{RESULT_DIR}/expression_processed/BRCA/{{norm_method}}.csv",
+        meta = f"{RESULT_DIR}/downsample/BRCA/meta_sheets/{{step}}-{{norm_method}}_meta.csv",
+        grn =  f"{RESULT_DIR}/reference_networks/genie3/shared/genie3_shared_{{norm_method}}.top_100k.csv",
+    output:
+        networks = f"{RESULT_DIR}/downsample/BRCA/{{step}}-{{norm_method}}-genie3_shared_{{norm_method}}.top_100k.fea",
+        stats = f"{RESULT_DIR}/downsample/BRCA/{{step}}-{{norm_method}}-genie3_shared_{{norm_method}}.top_100k-stats.csv",
+    log:
+        "logs/downsample_dysregnet/{step}-{norm_method}.log"
+    shell:
+        "python workflow/scripts/dysregnet_run.py "
+        "--expr {input.expr} "
+        "--meta {input.meta} "
+        "--grn {input.grn} "
+        "--no_direction "
+        "--output {output.networks} "
+        "--output_stats {output.stats} "
+        "&> {log}"
+
+rule downsample_plots:
+    input:
+        lambda wildcards: expand(rules.downsample_dysregnet.output.stats, norm_method=wildcards.norm_method, step=DOWNSAMPLE_STEPS)
+    output:
+        f"{RESULT_DIR}/figures/downsample/BRCA-age-{{norm_method}}-downsample.png"
+    log:
+        "logs/downsample_plots/{norm_method}.log"
+    shell:
+        "python workflow/scripts/downsample_plots.py "
+        "--inputs {input} "
+        "--output {output} "
+        "&> {log}"
 
 #### database ####
 
@@ -778,6 +827,9 @@ rule all:
 
         # network stats plots
         expand(rules.network_stats_plots.output, norm_method="tpm"),
+
+        # downsample analysis
+        expand(rules.downsample_plots.output, norm_method="tpm"),
 
         # run time benchmark
         rules.runtime_plots.output,

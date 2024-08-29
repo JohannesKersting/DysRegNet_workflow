@@ -71,6 +71,7 @@ meta['race'] = meta['race'].fillna('not reported')
 meta["race"] = meta["race"].replace({"[Unknown]": 'not reported', "[Not Evaluated]":'not reported'})
 
 expr = expr.set_index(expr.columns[0])
+expr = expr[meta[idCol]]
 if not all(expr.columns == meta[idCol]):
     raise ValueError(f"Column names of expression differ from '{idCol}' column in meta")
 expr = expr.T
