@@ -658,13 +658,15 @@ rule runtime_plots:
         rules.runtime_dysregnet.benchmark,
         rules.runtime_ssn.benchmark,
     output:
-        f"{RESULT_DIR}/figures/runtime/runtime.png/"
+        sec = f"{RESULT_DIR}/figures/runtime/runtime_sec.png/",
+        min = f"{RESULT_DIR}/figures/runtime/runtime_min.png/",
     log:
         "logs/runtime_plots.log"
     shell:
         "python workflow/scripts/runtime_plots.py "
         "--input {input} "
-        "--output {output} "
+        "--output_sec {output.sec} "
+        "--output_min {output.min} "
         "&> {log}"
 
 #### downsampling analysis ####
