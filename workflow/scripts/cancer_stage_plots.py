@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--inputs', nargs='+', required=True,
                         help='.csv files with test results')
     parser.add_argument('--output', type=str, required=True,
-                        help='Output path to the result .png (will also be saved as .pdf)')
+                        help='Output path to the result .png (will also be saved as .pdf and .eps)')
 
     args = parser.parse_args()
 
@@ -96,8 +96,9 @@ def main():
     g.set_titles(col_template="{col_name}", row_template="{row_name}")
     g.add_legend(title="Method")
 
-    plt.savefig(output_path, dpi=300)
-    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_path, dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.eps', dpi=600)
 
 
 if __name__ == "__main__":

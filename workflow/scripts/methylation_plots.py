@@ -125,8 +125,9 @@ def main():
             labels = [u'\u2217 ' if row["global p-value"] < 0.05 else "" for index, row in sub_df.iterrows()]
             ax.bar_label(c, labels=labels)
 
-    plt.savefig(output_path, dpi=300)
-    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_path, dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.eps', dpi=600)
 
 
 

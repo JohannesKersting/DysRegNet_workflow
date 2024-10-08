@@ -105,8 +105,9 @@ def main():
     g.add_legend(title="Cancer")
     g.tight_layout()
 
-    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-R2.png"), dpi=300)
-    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-R2.pdf"), dpi=300)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-R2.png"), dpi=600)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-R2.pdf"), dpi=600)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-R2.eps"), dpi=600)
 
 
     # TF confounder distribution plot
@@ -138,8 +139,9 @@ def main():
 
     g.tight_layout()
 
-    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-TF.png"), dpi=300)
-    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-TF.pdf"), dpi=300)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-TF.png"), dpi=600)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-TF.pdf"), dpi=600)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-TF.eps"), dpi=600)
     tf_stats_df = None
 
 
@@ -202,8 +204,9 @@ def main():
 
         g.tight_layout()
 
-        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-confounders-{network}.png"), dpi=300)
-        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-confounders-{network}.pdf"), dpi=300)
+        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-confounders-{network}.png"), dpi=600)
+        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-confounders-{network}.pdf"), dpi=600)
+        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-confounders-{network}.eps"), dpi=600)
 
 
         # plot without coeficcients
@@ -226,8 +229,9 @@ def main():
 
         g.tight_layout()
 
-        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-{network}.png"), dpi=300)
-        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-{network}.pdf"), dpi=300)
+        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-{network}.png"), dpi=600)
+        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-{network}.pdf"), dpi=600)
+        plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-{network}.eps"), dpi=600)
         plt.show()
 
         # count significant p-values
@@ -279,8 +283,9 @@ def main():
 
     g.tight_layout()
 
-    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-all.png"), dpi=300)
-    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-all.pdf"), dpi=300)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-all.png"), dpi=600)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-all.pdf"), dpi=600)
+    plt.savefig(os.path.join(output_dir, f"model_stats-{norm_method}-pvals-all.eps"), dpi=600)
 
 
 

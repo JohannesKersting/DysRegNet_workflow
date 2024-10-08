@@ -105,8 +105,9 @@ def main():
     g.set_ylabels("Dysregulated edges")
     g.tight_layout()
 
-    plt.savefig(output_edges_path, dpi=300)
-    plt.savefig(os.path.splitext(output_edges_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_edges_path, dpi=600)
+    plt.savefig(os.path.splitext(output_edges_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_edges_path)[0] + '.eps', dpi=600)
 
     # plot nodes
     sns.set(style="whitegrid")
@@ -122,8 +123,9 @@ def main():
     g.set_ylabels("Number of nodes")
     g.tight_layout()
 
-    plt.savefig(output_nodes_path, dpi=300)
-    plt.savefig(os.path.splitext(output_nodes_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_nodes_path, dpi=600)
+    plt.savefig(os.path.splitext(output_nodes_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_nodes_path)[0] + '.eps', dpi=600)
 
     # plot number of connected components
     sns.set(style="whitegrid")
@@ -139,8 +141,9 @@ def main():
     g.set_ylabels("Connected components")
     g.tight_layout()
 
-    plt.savefig(output_components_path, dpi=300)
-    plt.savefig(os.path.splitext(output_components_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_components_path, dpi=600)
+    plt.savefig(os.path.splitext(output_components_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_components_path)[0] + '.eps', dpi=600)
 
     # plot mean nodes per component
     sns.set(style="whitegrid")
@@ -156,8 +159,9 @@ def main():
     g.set_ylabels("Mean nodes per component")
     g.tight_layout()
 
-    plt.savefig(output_nodes_per_component_path, dpi=300)
-    plt.savefig(os.path.splitext(output_nodes_per_component_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_nodes_per_component_path, dpi=600)
+    plt.savefig(os.path.splitext(output_nodes_per_component_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_nodes_per_component_path)[0] + '.eps', dpi=600)
 
 
 if __name__ == "__main__":

@@ -118,8 +118,9 @@ def main():
             print(f"{ax.get_title()} {c.get_label()} {len(labels)}")
             ax.bar_label(c, labels=labels)
 
-    plt.savefig(output_path, dpi=300)
-    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_path, dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.eps', dpi=600)
 
 
     # global p-values plot
@@ -137,8 +138,9 @@ def main():
     g.add_legend(title="Method")
     g.refline(y=-np.log10(0.05))
 
-    plt.savefig(output_global_path, dpi=300)
-    plt.savefig(os.path.splitext(output_global_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_global_path, dpi=600)
+    plt.savefig(os.path.splitext(output_global_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_global_path)[0] + '.eps', dpi=600)
 
 
 if __name__ == "__main__":

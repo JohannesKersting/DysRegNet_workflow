@@ -137,8 +137,9 @@ def main():
     g.legend(title="Reference network", bbox_to_anchor=(1, 0), loc="lower right", borderaxespad=1)
     plt.tight_layout() # else saving will cut of the axis labels
 
-    plt.savefig(output_path, dpi=300)
-    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_path, dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.eps', dpi=600)
 
 
 

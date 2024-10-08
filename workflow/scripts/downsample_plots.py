@@ -43,8 +43,9 @@ def main():
     ax.set_ylabel('P-value of the "age" coefficient')
     plt.gcf().tight_layout()
 
-    plt.savefig(output_path, dpi=300)
-    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_path, dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_path)[0] + '.eps', dpi=600)
 
 if __name__ == "__main__":
     main()

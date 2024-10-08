@@ -55,8 +55,9 @@ def main():
     plt.xlabel("Method")
     plt.tight_layout()
 
-    plt.savefig(output_sec_path, dpi=300)
-    plt.savefig(os.path.splitext(output_sec_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_sec_path, dpi=600)
+    plt.savefig(os.path.splitext(output_sec_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_sec_path)[0] + '.eps', dpi=600)
     plt.clf()
 
     # Plot in minutes
@@ -67,8 +68,9 @@ def main():
     plt.xlabel("Method")
     plt.tight_layout()
 
-    plt.savefig(output_min_path, dpi=300)
-    plt.savefig(os.path.splitext(output_min_path)[0] + '.pdf', dpi=300)
+    plt.savefig(output_min_path, dpi=600)
+    plt.savefig(os.path.splitext(output_min_path)[0] + '.pdf', dpi=600)
+    plt.savefig(os.path.splitext(output_min_path)[0] + '.eps', dpi=600)
     plt.clf()
 
 if __name__ == "__main__":
